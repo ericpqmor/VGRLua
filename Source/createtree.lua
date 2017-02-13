@@ -1,9 +1,51 @@
 
 
 
-local function InsideScene()
+local function ShapeInsideScene(tree, camada, bb, read)
+  local el_id = tree[camada].data
 
 
+end
+
+local function CreateTreeBranch(tree, camada, read)
+local branch = { }
+local n_camada = camada .. read
+-- Cria o bounding box
+local bb = tree[camada].bb
+local Dx = (bb.xmax-bb.xmin)/2
+local Dy = (bb.ymax-bb.ymin)/2
+local xmax, xmin, ymax, ymin
+if read == 1 then
+  xmax = bb.xmin + Dx
+  xmin = bb.xmin
+  ymax = bb.ymin + 2*Dy
+  ymin = bb.ymin + Dy
+elseif read == 2 then
+  xmax = bb.xmin + 2*Dx
+  xmin = bb.xmin + Dx
+  ymax = bb.ymin + 2*Dy
+  ymin = bb.ymin + Dy
+elseif read == 3 then
+  xmax = bb.xmin + Dx
+  xmin = bb.xmin
+  ymax = bb.ymin + Dy
+  ymin = bb.ymin
+elseif read == 4 then
+  xmax = bb.xmin + 2*Dx
+  xmin = bb.xmin + Dx
+  ymax = bb.ymin + Dy
+  ymin = bb.ymin
+end
+branch.bb = {xmax = xmax, xmin = xmin, ymax = ymax, ymin = ymin}
+--
+branch.data = { }
+for k,el in pairs(tree[camada].data) do
+
+
+end
+
+
+return branch
 
 end
 --[[Esquema da árvore
@@ -26,12 +68,13 @@ local tree = { }
 
 --[[ Aqui, inicializa a camada 0, que é a imagem inteira, logo, carrega todos
 os shapes e seus elementos em data--]]
+
 tree[0] = {
   bb = {xmax = vxmax, xmin = vxmin, ymax = vymax, ymin = vymin},
   leaf = false,
   read = 0,
   depth = 0,
-  w_i = 0,
+  w_i = {},
   -- data = { --[[ element_id--]]},
   {}, -- 1
   {}, -- 2
@@ -42,6 +85,7 @@ tree[0].data = {}
 local numseg = 0
 for i = 1, #elements do
   table.insert(tree[0].data,i)
+  table.insert(tree[0].w_i,0)
   local instructions = scene.shapes[i].instructions
   for j = 1, #instructions do
     table.insert(tree[0].data[i], j)
@@ -52,16 +96,22 @@ for i = 1, #elements do
   end
 end
 -- Profundidade atual
-local idepth = tree[0].depth
-local read = tree[0].read
-tree[0].numseg = numseg
+local idepth = tree[0].depth -- 0
+local read = tree[0].read -- 0
+local camada = '0'
+tree[camada].numseg = numseg
+
 --[[Aqui, inicia o loop no resto das camadas, o critério de parada é
 a profundidade ser zero e todas as suas subdivisões terem sido criadas --]]
 while (idepth ~= 0) or (idepth == 0 and read ~= 4) do
+  local numseg = tree[camada].numseg
+  if numseg > maxseg and tree[camada].read < 4 then
+    tree[camada].read = read + 1
+    tree[camada].leaf = false
+    tree = CreateTreeBranch(tree,camada,read+1)
 
 
-
-
+  end
 end
 
 
