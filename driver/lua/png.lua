@@ -34,13 +34,18 @@ function accel_circle(scene, shape)
     return viewport
 end
 
-function insideBoundingBox(xmin, ymin, xmax, ymax, x, y)
-	return xmin <= x and x <= xmax and ymin <= y and y < ymax 
+function insideBoundingBox(boundingBox, x, y)
+	local xmin, ymin, xmax, ymax = unpack(boundingBox, 1, 4)
+	return xmin <= x and x < xmax and ymin <= y and y < ymax 
 end
 
 function test_linear_segment(x1, y1, x2, y2, x, y)
-		local valor = (y2 - y1)*x + (x1 - x2)*y - x1*(y2 - y1) - y1*(x1 - x2)
-		return (y2 - y1)*valor < 0 
+	local valor = (y2 - y1)*x + (x1 - x2)*y - x1*(y2 - y1) - y1*(x1 - x2)
+	return (y2 - y1)*valor < 0 
+end
+
+function vertical_test_linear_segment(x1,y1,x2,y2,x,y)
+
 end
 
 ----------------------------------------
@@ -279,31 +284,24 @@ function _M.accelerate(scene, viewport)
 	local element = 1
 
 	function bgc(self)
-		-- body
 	end
 
 	function atc(self)
-		-- body
 	end
 
 	function enc(self)
-		-- body
 	end
 
 	function bgf(self)
-		-- body
 	end
 
 	function enf(self)
-		-- body
 	end
 
 	function bgb(self)
-		-- body
 	end
 
 	function enb(self)
-		-- body
 	end
 
 	function bgt(self, depth, xf)
@@ -565,6 +563,32 @@ function _M.accelerate(scene, viewport)
     	end
     end
 
+    local tree
+    tree.leaf = false
+    tree.sub = {}
+    tree.boundingBox = viewport
+
+    vxmin, vymin, vxmax, vymax = unpack(tree.boundingBox,1,4)
+
+    dx = 0.5*(vxmin+vxmax)
+    dy = 0.5*(vymin+vymax)
+
+    tree.sub[1] = scene.scene()
+    tree.sub[1].leaf = true
+    tree.sub[1].boundingBox = {vxmin+dx,vxmin+2*dx,vymin,vymin+dy}
+
+    tree.sub[2] = scene.scene()
+    tree.sub[2].leaf = true
+    tree.sub[2].boundingBox = {vxmin+dx,vxmin+2*dx,vymin+dy,vymin+2*dy}
+
+    tree.sub[3] = scene.scene()
+    tree.sub[3].leaf = true
+    tree.sub[3].boundingBox = {vxmin,vxmin+dx,vymin,vymin+dy}
+
+    tree.sub[4] = scene.scene()
+    tree.sub[4].leaf = true
+    tree.sub[4].boundingBox = {vxmin+dx,vxmin+2*dx,vymin+dy,vymin+2*dy}
+
 	return new_scene
 end
 
@@ -638,7 +662,6 @@ local function LocalizeStop(t, stops)
 	elseif t >  tmax then
 	  return tmax, tmax, i_max, i_max
 	end
-end
 
 function findColor(t, ramp, paint)
 	local p = wrap_function(t, ramp.spread)
@@ -881,9 +904,8 @@ local function sample(accel, x, y, p)
 	 		local element = accel.elements[i]
 	    	local shape = accel.shapes[i]
 	    	local paint = accel.paints[i]
-	    	local pxmin, pymin, pxmax, pymax = unpack(shape.boundingBox, 1, 4)
-	    	if insideBoundingBox(pxmin, pymin, pxmax, pymax, x, y) == true then
-	    		local wind_num = wind(accel,i,x,y)
+	    	if insideBoundingBox(shape.boundingBox, x, y) == true then
+	    		local wind_num = wind(accel,i,x,y) + scene.wind_increments[i]
 				if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
 						r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
 		        end
@@ -895,6 +917,12 @@ local function sample(accel, x, y, p)
 		end
 	end
 	return blend(1,1,1,1,r,g,b,a)
+end
+
+function treeIterate(tree,x,y)
+	for i=1,#tree.sub,1 do
+		if insideBoundingBox(tree.sub[i].boundingBox,x,y)==true then return tree.sub[i] end
+	end 
 end
 
 function gamma_correction(sr,sg,sb,sa,n)
@@ -914,7 +942,11 @@ end
 --  This is the other function you have to implement.
 --  It receives the acceleration datastructure, the sampling pattern,
 --  and a sampling position. It returns the color at that position.
-local function supersample(accel, pattern, x, y, p)
+local function supersample(tree, pattern, x, y, p)
+	local accel
+	while accel.leaf == false do
+		accel = treeIterate(tree,x,y) 
+	end
     -- Implement your own version
     local r,g,b,a
     local sr,sg,sb,sa = 0,0,0,0
@@ -994,8 +1026,8 @@ end
 -- In theory, you don't have to change this function.
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
-function _M.render(scene, viewport, file, args)
-    local parsed = parseargs(args)
+function _M.render(tree, viewport, file, args)
+    LocalizeStopl parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
@@ -1020,7 +1052,7 @@ function _M.render(scene, viewport, file, args)
         local y = vymin+i-1.+.5
         for j = 1, width do
             local x = vxmin+j-1.+.5
-            img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
+            img:set_pixel(j, i, supersample(tree, pattern, x, y, p))
         end
     end
 	stderr("\n")
