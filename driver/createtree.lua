@@ -1,15 +1,59 @@
+local table = require"table"
 
 
 
-local function ShapeInsideScene(tree, camada, bb, read)
-  local el_id = tree[camada].data
-
+local function Inside(x, y, xmax, xmin, ymax, ymin)
+if y <= ymax and y >= ymin then
+	if x <= xmax  and x >= xmin then
+		return true
+	else
+		return false
+	end
+else
+	return false
+end
 
 end
 
-local function CreateTreeBranch(tree, camada, read)
+
+local function ShapeInsideScene(scene,bb,element_id)
+  local shape = scene.shapes[element_id]
+  local xmax, xmin ,ymax, ymin = unpack(shape.supdata)
+  -- gambiarra que tou fazendo aqui pra testar se o shape tá dentro da cena
+  local x1, y1 = xmin, ymin
+  local x2, y2 = xmax, ymin
+  local x3, y3 = xmin, ymax
+  local x4, y4 = xmax, ymax
+  xmax, xmin, ymax, ymin = bb.xmax, bb.xmin, bb.ymax, bb.xmin
+  if Inside(x1, y1, xmax, xmin, ymax, ymin) == true then
+    return true
+  elseif Inside(x2, y2, xmax, xmin, ymax, ymin) == true then
+    return true
+  elseif Inside(x3, y3, xmax, xmin, ymax, ymin) == true then
+    return true
+  elseif Inside(x4, y4, xmax, xmin, ymax, ymin) == true then
+    return true
+  end
+  -- outra gambiarra aqui, a cena pode ser contida totalmente pelo shape
+  local bbx1, bby1 = xmin, ymin
+  local bbx2, bby2 = xmax, ymin
+  local bbx3, bby3 = xmin, ymax
+  local bbx4, bby4 = xmax, ymax
+  xmax, xmin ,ymax, ymin = unpack(shape.supdata)
+  if Inside(bbx1, bby1, xmax, xmin, ymax, ymin) == true then
+    return true
+  elseif Inside(bbx2, bby2, xmax, xmin, ymax, ymin) == true then
+    return true
+  elseif Inside(bbx3, bby3, xmax, xmin, ymax, ymin) == true then
+    return true
+  elseif Inside(bbx4, bby4, xmax, xmin, ymax, ymin) == true then
+    return true
+  end
+  return false
+end
+
+local function CreateTreeBranch(scene, tree, camada, read, maxseg)
 local branch = { }
-local n_camada = camada .. read
 -- Cria o bounding box
 local bb = tree[camada].bb
 local Dx = (bb.xmax-bb.xmin)/2
@@ -37,12 +81,26 @@ elseif read == 4 then
   ymin = bb.ymin
 end
 branch.bb = {xmax = xmax, xmin = xmin, ymax = ymax, ymin = ymin}
---
+--Cria a base de dados do galho
 branch.data = { }
+branch.numseg = 0
 for k,el in pairs(tree[camada].data) do
-
-
+  if ShapeInsideScene(scene, branch.bb, k) == true then
+    -- retorna uma table com os seg que pertencem (a implementar)
+    branch.data[k] = SegmentInsideScene()
+    branch.numseg = branch.numseg + table.getn(branch.data[k])
+  end
 end
+-- Cria a flag leaf
+if branch.numseg > maxseg then
+  branch.leaf == false
+else
+  branch.leaf == true
+end
+-- Cria os w_i
+branch.w_i = { } -- tem que pensar nessa parte
+-- Cria o depth
+branch.depth = tree[camada].depth + 1
 
 
 return branch
@@ -74,12 +132,8 @@ tree[0] = {
   leaf = false,
   read = 0,
   depth = 0,
-  w_i = {},
+  w_i = {}
   -- data = { --[[ element_id--]]},
-  {}, -- 1
-  {}, -- 2
- {}, -- 3
- {} -- 4
 }
 tree[0].data = {}
 local numseg = 0
@@ -108,9 +162,9 @@ while (idepth ~= 0) or (idepth == 0 and read ~= 4) do
   if numseg > maxseg and tree[camada].read < 4 then
     tree[camada].read = read + 1
     tree[camada].leaf = false
-    tree = CreateTreeBranch(tree,camada,read+1)
-
-
+    local n_camada = camada .. tree[camada].read
+    -- Cria um galho  
+    tree[n_camada] = CreateTreeBranch(scene,tree,camada,read+1, maxseg)
   end
 end
 
