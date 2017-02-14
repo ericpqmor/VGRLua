@@ -35,6 +35,99 @@ function horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
   return false
 end
 
+function implicit_vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y)
+    local valor = 4*(y*x1-y1*x)*(y2*x1-y1*x2)-((2*y1-y2)*x+(x2-2*x1)*y)*((2*y1-y2)*x+(x2-2*x1)*y)
+    local sign = 2*x2*(y1*x2 - y2*x1)
+    if sign > 0 then valor = -valor end
+
+    return valor > 0
+end
+
+function implicit_quadratic_test(x0,y0,x1,y1,x2,y2,x,y)
+    local valor = 4*(x*y1-x1*y)*(x2*y1-x1*y2)-((2*x1-x2)*y+(y2-2*y1)*x)*((2*x1-x2)*y+(y2-2*y1)*x)
+    local sign = 2*y2*(x1*y2 - x2*y1)
+    if sign > 0 then valor = -valor end
+
+    return valor < 0
+end
+
+function vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+  local test = false
+  if xmin <= x and x < xmax and y > ymin then
+    if y >= ymax then test = true
+    else
+      if (y1-y0)*(x2-x0) == (y2-y0)*(x1-x0) then
+        test = vertical_test_linear_segment(x0,y0,x2,y2,x,y)
+      elseif vertical_test_linear_segment(x0,y0,x2,y2,x1,y1) == true then
+        if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
+          test = implicit_vertical_quadratic_test(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x-x0,y-y0)
+        else
+          test = false
+        end
+      else
+        if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
+          test = true
+        else
+          test = implicit_vertical_quadratic_test(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x-x0,y-y0)
+        end
+      end 
+    end
+  end
+
+  if test then
+    if winding_rule == "non-zero" then
+      if x0 > x2 then return -1 end
+      if x0 < x2 then return  1 end
+    else
+      return 1
+    end
+  end
+
+  return 0
+end
+
+function quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+  local test = false
+  if ymin <= y and y < ymax and x <= xmax then
+    if x <= xmin then test = true
+    else
+      if vertical_test_linear_segment(x0,y0,x2,y2,x1,y1) == true then
+        if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
+          --Degeneration
+          if (y1-y0)*(x2-x0) == (y2-y0)*(x1-x0) then
+            test = vertical_test_linear_segment(x0,y0,x2,y2,x,y)
+          else
+            test = implicit_quadratic_test(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x-x0,y-y0)
+          end
+        else
+          test = false
+        end
+      else
+        if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
+          test = true
+        else
+          if (y1-y0)*(x2-x0) == (y2-y0)*(x1-x0) then
+            test = vertical_test_linear_segment(x0,y0,x2,y2,x,y)
+          else
+            test = implicit_quadratic_test(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x-x0,y-y0)
+          end
+        end
+      end 
+    end
+  end
+
+  if test then
+    if winding_rule == "non-zero" then
+      if y0 > y2 then return -1 end
+      if y0 < y2 then return  1 end
+    else
+      return 1
+    end
+  end
+
+  return 0
+end
+
 function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
   if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == false then
     return true
@@ -43,6 +136,19 @@ function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
   elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == false then
     return true
   elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == false then
+    return true
+  else
+    return false
+end
+
+function intersects_quadratic_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1,x2,y2)
+  if vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmax,ymin,xmin,ymin,xmax,ymax) == false then
+    return true
+  elseif vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmin,ymax,xmin,ymin,xmax,ymax) == true and vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmin,ymin,xmin,ymin,xmax,ymax) == false then
+    return true
+  elseif horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmin,ymax,xmin,ymin,xmax,ymax) == false then
+    return true
+  elseif horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmax,ymax,xmin,ymin,xmax,ymax) == false then
     return true
   else
     return false
@@ -97,6 +203,7 @@ local function ShapeInsideScene(scene,bb,shape)
         xclose, yclose = x0, y0
         begin = false
       end
+      local isInside = false
       --Primeiro, testo os endpoints
       if inside(x0,y0,xmin,ymin,xmax,ymax) == true or inside(x1,y1,xmin,ymin,xmax,ymax) == true then isInside = true
       --Agora testa as intersecções. Perceba que testo todas as arestas.
@@ -132,7 +239,19 @@ local function ShapeInsideScene(scene,bb,shape)
         xclose, yclose = x0, y0
         begin = false
       end
-      wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
+      local isInside = false
+      --Primeiro, testo os endpoints
+      if inside(x0,y0,xmin,ymin,xmax,ymax) == true or inside(x1,y1,xmin,ymin,xmax,ymax) == true then isInside = true
+      --Agora testa as intersecções. Perceba que testo todas as arestas.
+      elseif intersects_quadratic_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1,x2,y2) == true then
+          isInside = true
+      end
+
+      if isInside == true then
+        path.push_data(new_path,x0,y0,x1,y1)
+        --Não entendi esse Rewind (que tem na função push_instruction em path.lua). Depois me avisa
+        path.push_instruction(new_path, instruction)
+      end
       cont = cont + 1
       dat = dat + 4   
     end
