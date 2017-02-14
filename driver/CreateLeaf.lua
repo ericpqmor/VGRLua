@@ -1,6 +1,7 @@
 local table = require "table"
 local scenelib = require "scene"
 local path = require "path"
+local png = require "png"
 
 ---- AQUI CRIA O SEGMENTO LINEAR NA CENA NOVA
 local function NLinearSegment(x0,y0, x1, y1, shape, bb, offsetit)
@@ -50,8 +51,6 @@ end
 
 
 
-
-
 ----- AQUI COMEÇA A FUNÇÃO
 local function CreateLeaf(cena_grande, folha)
 -- cena_grande = cena recebida no accelerate
@@ -80,6 +79,7 @@ for k in pairs(folha.data) do -- itera nos shapes contidos pela folha
       shape, offsetit = NLinearSegment(x0,y0,x1,y1, shape, bb, offsetit)
     end
   end
+  local shape.w_i = png.wind(cena_grande, k, bb.xmax, bb.ymin)
   -- passa as informações do shape para a cena nova
   table.insert(scene.shapes, shape)
   table.insert(scene.elements, element)
