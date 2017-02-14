@@ -36,13 +36,13 @@ function horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
 end
 
 function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
-  if vertical_linear_test(x0,y0,xclose,yclose,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,xclose,yclose,xmax,ymin,xmin,ymin,xmax,ymax) == false then
+  if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == false then
     return true
-  elseif vertical_linear_test(x0,y0,xclose,yclose,xmin,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,xclose,yclose,xmin,ymin,xmin,ymin,xmax,ymax) == false then
+  elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == false then
     return true
-  elseif horizontal_linear_test(x0,y0,xclose,yclose,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,xclose,yclose,xmin,ymax,xmin,ymin,xmax,ymax) == false then
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == false then
     return true
-  elseif horizontal_linear_test(x0,y0,xclose,yclose,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,xclose,yclose,xmax,ymax,xmin,ymin,xmax,ymax) == false then
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == false then
     return true
   else
     return false
@@ -97,8 +97,20 @@ local function ShapeInsideScene(scene,bb,shape)
         xclose, yclose = x0, y0
         begin = false
       end
+      --Primeiro, testo os endpoints
+      if inside(x0,y0,xmin,ymin,xmax,ymax) == true or inside(x1,y1,xmin,ymin,xmax,ymax) == true then isInside = true
+      --Agora testa as intersecções. Perceba que testo todas as arestas.
+      elseif intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1) == true then
+          isInside = true
+      end
 
-      wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
+      --
+      if isInside == true then
+        path.push_data(new_path,x0,y0,x1,y1)
+        --Não entendi esse Rewind (que tem na função push_instruction em path.lua). Depois me avisa
+        path.push_instruction(new_path, instruction)
+      end
+
       cont = cont + 1
       dat = dat + 2
     end
