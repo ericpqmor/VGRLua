@@ -345,38 +345,6 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 	return 0
 end
 
------------------------------------------
---[[		SHORTCUT TREE 			 ]]--
------------------------------------------
-local function createBoundingBox(bb, read)
-  local xmin, xmax, ymin, ymax
-  local vxmin, vymin, vxmax, vymax = unpack(bb,1,4)
-  local Dx = (vxmin + vxmax)/2
-  local Dy = (vymin + vymax)/2
-  if read == 1 then
-    xmax = vxmin + Dx
-    xmin = vxmin
-    ymax = vymin + 2*Dy
-    ymin = vymin + Dy
-  elseif read == 2 then
-    xmax = vxmin + 2*Dx
-    xmin = vxmin + Dx
-    ymax = vymin + 2*Dy
-    ymin = vymin + Dy
-  elseif read == 3 then
-    xmax = vxmin + Dx
-    xmin = vxmin
-    ymax = vymin + Dy
-    ymin = vymin
-  elseif read == 4 then
-    xmax = vxmin + 2*Dx
-    xmin = vxmin + Dx
-    ymax = vymin + Dy
-    ymin = vymin
-  end
-
-  return xmin,xmax,ymin,ymax
-end
 
 -- Função que diferencia scenes como branches ou leafs
 -- LEMBRAR DE USÁ-LA NO SAMPLE
@@ -404,7 +372,6 @@ end
 function ShapeInsideScene(scene, shape, new_path)
 
 	local xmin,ymin,xmax,ymax = unpack(scene.boundingBox,1,4)
-	--print(xmin,ymin,xmax,ymax)
 	local hasSegment = false
 	local begin = false
 	local dat = 1
@@ -414,13 +381,11 @@ function ShapeInsideScene(scene, shape, new_path)
 		local instruction = shape.instructions[i]
 
 		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
-			--print("Here1")
 			begin = true
 			dat = dat + 1
 		end
 				 		
 		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
-			--print("Here2")
 			local x0,y0 = unpack(shape.data,dat,dat+1)
 
 			local intersection = false
@@ -439,10 +404,8 @@ function ShapeInsideScene(scene, shape, new_path)
 		end
 
 		if instruction == "linear_segment" then
-			--print("Here3")
 			local x0,y0,x1,y1 = unpack(shape.data,dat,dat+3)
 
-			--print(x0,y0,x1,y1, "Dondokodoko")
 			if begin == true then
 				xclose, yclose = x0, y0
 				begin = false
@@ -541,7 +504,6 @@ function subdivide(fatherScene, maxdepth, maxseg)
 
     local xmin,ymin,xmax,ymax = createBoundingBox(fatherScene.boundingBox, i)
     new_scene.boundingBox = {xmin,ymin,xmax,ymax}
-    --print(xmin,ymin,xmax,ymax)
 
     new_scene.depth = fatherScene.depth + 1
     new_scene.segments = 0
@@ -878,15 +840,6 @@ function _M.accelerate(scene, viewport)
     new_scene.leaf = isLeaf(new_scene, 3, 100)
 
     subdivide(new_scene, 3, 100)
-    local child_scene = new_scene.child["01"]
-    for i=1,#child_scene.shapes do
-    	local shape = child_scene.shapes[i]
-    	for j=1,#shape.data do io.write(shape.data[j], " ") end
-    end 
-    --io.write("\n")
-
-    --print(child_scene.boundingBox[1], child_scene.boundingBox[2], child_scene.boundingBox[3], child_scene.boundingBox[4])
-
 	return new_scene
 end
 
