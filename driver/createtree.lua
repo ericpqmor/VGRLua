@@ -248,7 +248,7 @@ local function ShapeInsideScene(scene,bb,shape)
       end
 
       if isInside == true then
-        path.push_data(new_path,x0,y0,x1,y1)
+        path.push_data(new_path,x0,y0,x1,y1,x2,y2)
         --Não entendi esse Rewind (que tem na função push_instruction em path.lua). Depois me avisa
         path.push_instruction(new_path, instruction)
       end
