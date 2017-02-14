@@ -36,16 +36,58 @@ end
 
 function insideBoundingBox(boundingBox, x, y)
 	local xmin, ymin, xmax, ymax = unpack(boundingBox, 1, 4)
-	return xmin <= x and x < xmax and ymin <= y and y < ymax 
-end
+	return xmin <= x and x < xmax and ymin <= y and y < ymax end
 
-function test_linear_segment(x1, y1, x2, y2, x, y)
+function vertical_test_linear_segment(x1, y1, x2, y2, x, y)
 	local valor = (y2 - y1)*x + (x1 - x2)*y - x1*(y2 - y1) - y1*(x1 - x2)
-	return (y2 - y1)*valor < 0 
+	return (x2 - x1)*valor < 0 
 end
 
-function vertical_test_linear_segment(x1,y1,x2,y2,x,y)
+function horizontal_test_linear_segment(x1, y1, x2, y2, x, y)
+	local valor = (y2 - y1)*x + (x1 - x2)*y - x1*(y2 - y1) - y1*(x1 - x2)
+	return (x2 - x1)*valor < 0 
+end
 
+function vertical_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
+	local test = false
+	local wind_num = 0
+
+	if xmin <= x and x < xmax and y >= ymin then 
+		if y >= ymax then test = true
+		else test = test_linear_segment(x0, y0, x1, y1, x, y) end
+	end
+
+	if test then
+		if winding_rule == "non-zero" then
+			if x0 > x1 then wind_num = -1 end
+			if x0 < x1 then wind_num =  1 end
+		else
+			wind_num = 1
+		end
+	end
+
+	return wind_num
+end
+
+function horizontal_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
+	local test = false
+	local wind_num = 0
+
+	if ymin <= y and y < ymax and x <= xmax then
+		if x <= xmin then test = true
+		else test = test_linear_segment(x0, y0, x1, y1, x, y) end
+	end
+
+	if test then
+		if winding_rule == "non-zero" then
+			if y0 > y1 then wind_num = -1 end
+			if y0 < y1 then wind_num =  1 end
+		else
+			wind_num = 1
+		end
+	end
+
+	return wind_num
 end
 
 ----------------------------------------
@@ -188,9 +230,9 @@ function insideTriangle(x0,y0,x1,y1,x2,y2,x3,y3,winding_rule,x,y)
 	local xi, yi = x1*(x3*y2-x2*y3)/den, y1*(x3*y2-x2*y3)/den
 
 	local wind_num = 0
-	wind_num = wind_num + linear_test(x0,y0,x3,y3,x,y,"odd",math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)) 
-	wind_num = wind_num + linear_test(x3,y3,xi,yi,x,y,"odd",math.min(x3,xi),math.min(y3,yi),math.max(x3,xi),math.max(y3,yi)) 
-	wind_num = wind_num + linear_test(x0,y0,xi,yi,x,y,"odd",math.min(x0,xi),math.min(y0,yi),math.max(x0,xi),math.max(y0,yi))
+	wind_num = wind_num + vertical_linear_test(x0,y0,x3,y3,x,y,"odd",math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)) 
+	wind_num = wind_num + vertical_linear_test(x3,y3,xi,yi,x,y,"odd",math.min(x3,xi),math.min(y3,yi),math.max(x3,xi),math.max(y3,yi)) 
+	wind_num = wind_num + vertical_linear_test(x0,y0,xi,yi,x,y,"odd",math.min(x0,xi),math.min(y0,yi),math.max(x0,xi),math.max(y0,yi))
 
 	return wind_num == 1
 end
@@ -209,7 +251,7 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 	end
 
 	if bezier.classify3(x0,y0,x1,y1,x2,y2,x3,y3) == "line or point" then
-		return linear_test(x0,y0,x3,y3,x,y, winding_rule,xmin,ymin,xmax,ymax)
+		return vertical_linear_test(x0,y0,x3,y3,x,y, winding_rule,xmin,ymin,xmax,ymax)
 	elseif bezier.classify3(x0,y0,x1,y1,x2,y2,x3,y3) == "quadratic" then
 		return quadratic_test(x0,y0,x1,y1,x3,y3,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
 
@@ -253,27 +295,6 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 	end
 
 	return 0
-end
-
-function linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
-	local test = false
-	local wind_num = 0
-
-	if ymin <= y and y < ymax and x <= xmax then
-		if x <= xmin then test = true
-		else test = test_linear_segment(x0, y0, x1, y1, x, y) end
-	end
-
-	if test then
-		if winding_rule == "non-zero" then
-			if y0 > y1 then wind_num = -1 end
-			if y0 < y1 then wind_num =  1 end
-		else
-			wind_num = 1
-		end
-	end
-
-	return wind_num
 end
 
 function _M.accelerate(scene, viewport)
@@ -360,7 +381,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] = 
 					function(x, y, xclose, yclose, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-						return linear_test(x0,y0,xclose,yclose,x,y,winding_rule,xmin,ymin,xmax,ymax)
+						return vertical_linear_test(x0,y0,xclose,yclose,x,y,winding_rule,xmin,ymin,xmax,ymax)
 					end
 			end
 
@@ -383,7 +404,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] = 
 					function(x, y, xclose, yclose, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-						return linear_test(x0,y0,xclose,yclose,x,y,winding_rule,xmin,ymin,xmax,ymax)
+						return vertical_linear_test(x0,y0,xclose,yclose,x,y,winding_rule,xmin,ymin,xmax,ymax)
 					end
 			end
 
@@ -407,7 +428,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] = 
 					function(x, y, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-						return linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
+						return vertical_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
 					end
 			end
 
@@ -563,31 +584,7 @@ function _M.accelerate(scene, viewport)
     	end
     end
 
-    local tree
-    tree.leaf = false
-    tree.sub = {}
-    tree.boundingBox = viewport
-
-    vxmin, vymin, vxmax, vymax = unpack(tree.boundingBox,1,4)
-
-    dx = 0.5*(vxmin+vxmax)
-    dy = 0.5*(vymin+vymax)
-
-    tree.sub[1] = scene.scene()
-    tree.sub[1].leaf = true
-    tree.sub[1].boundingBox = {vxmin+dx,vxmin+2*dx,vymin,vymin+dy}
-
-    tree.sub[2] = scene.scene()
-    tree.sub[2].leaf = true
-    tree.sub[2].boundingBox = {vxmin+dx,vxmin+2*dx,vymin+dy,vymin+2*dy}
-
-    tree.sub[3] = scene.scene()
-    tree.sub[3].leaf = true
-    tree.sub[3].boundingBox = {vxmin,vxmin+dx,vymin,vymin+dy}
-
-    tree.sub[4] = scene.scene()
-    tree.sub[4].leaf = true
-    tree.sub[4].boundingBox = {vxmin+dx,vxmin+2*dx,vymin+dy,vymin+2*dy}
+   
 
 	return new_scene
 end
@@ -662,6 +659,7 @@ local function LocalizeStop(t, stops)
 	elseif t >  tmax then
 	  return tmax, tmax, i_max, i_max
 	end
+end
 
 function findColor(t, ramp, paint)
 	local p = wrap_function(t, ramp.spread)
@@ -905,7 +903,7 @@ local function sample(accel, x, y, p)
 	    	local shape = accel.shapes[i]
 	    	local paint = accel.paints[i]
 	    	if insideBoundingBox(shape.boundingBox, x, y) == true then
-	    		local wind_num = wind(accel,i,x,y) + scene.wind_increments[i]
+	    		local wind_num = wind(accel,i,x,y) --+ scene.wind_increments[i]
 				if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
 						r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
 		        end
@@ -942,11 +940,11 @@ end
 --  This is the other function you have to implement.
 --  It receives the acceleration datastructure, the sampling pattern,
 --  and a sampling position. It returns the color at that position.
-local function supersample(tree, pattern, x, y, p)
-	local accel
-	while accel.leaf == false do
-		accel = treeIterate(tree,x,y) 
-	end
+local function supersample(accel, pattern, x, y, p)
+	--local accel
+	--while accel.leaf == false do
+	--	accel = treeIterate(tree,x,y) 
+	--end
     -- Implement your own version
     local r,g,b,a
     local sr,sg,sb,sa = 0,0,0,0
@@ -1027,7 +1025,7 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(tree, viewport, file, args)
-    LocalizeStopl parsed = parseargs(args)
+    parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty

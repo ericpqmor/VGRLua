@@ -1,20 +1,11 @@
 local table = require"table"
 
-
-
 local function Inside(x, y, xmax, xmin, ymax, ymin)
-if y <= ymax and y >= ymin then
-	if x <= xmax  and x >= xmin then
+if y <= ymax and y >= ymin and x <= xmax  and x >= xmin then
 		return true
-	else
-		return false
-	end
 else
-	return false
+		return false
 end
-
-end
-
 
 local function ShapeInsideScene(scene,bb,element_id)
   local shape = scene.shapes[element_id]
@@ -168,9 +159,5 @@ while (idepth ~= 0) or (idepth == 0 and read ~= 4) do
   end
 end
 
-
-
-
-return tree
-
+  return tree
 end
