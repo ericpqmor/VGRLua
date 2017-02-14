@@ -140,6 +140,60 @@ end
 
 ]]--
 
+function ShapeInsideScene(new_scene, shape)
+end
+
+function subdivide(scene, maxdepth, maxseg)
+  local boundingbox = scene.boundingBox
+  scene.child = {}
+  for i=1,4 do
+    new_scene = scene.scene()
+
+    new_scene.id = scene.id .. i
+    scene.child[new_scene.id] = new_scene
+
+    local xmin,ymin,xmax,ymax = createBoundingBox(boundingBox, i)
+    new_scene.boundingBox = {xmin,ymin,xmax,ymax}
+
+    new_scene.depth = scene.depth + 1
+    new_scene.segments = 0
+
+    for i=1, #scene.shapes do
+      local shape = scene.shapes[i]
+      if ShapeInsideScene(new_scene, shape) == true then
+        new_scene.shapes[#new_scene.shapes+1] = shape
+        new_scene.segments = new_scene.segments + 1
+      end
+    end
+
+    if isLeaf(new_scene) == true then
+      return 
+    else
+      subdivide(new_scene, maxdepth, maxseg)
+    end
+  end
+end
+
+
+
+    -- outra gambiarra aqui, a cena pode ser contida totalmente pelo shape
+    local bbx1, bby1 = xmin, ymin
+    local bbx2, bby2 = xmax, ymin
+    local bbx3, bby3 = xmin, ymax
+    local bbx4, bby4 = xmax, ymax
+    xmax, xmin ,ymax, ymin = unpack(shape.supdata)
+    if inside(bbx1, bby1, xmin, ymin, xmax, ymax) == true then
+      return true
+    elseif inside(bbx2, bby2, xmin, ymin, xmax, ymax) == true then
+      return true
+    elseif inside(bbx3, bby3, xmin, ymin, xmax, ymax) == true then
+      return true
+    elseif inside(bbx4, bby4, xmin, ymin, xmax, ymax) == true then
+      return true
+    end
+    return false
+end
+
 local function createBoundingBox(bb, read)
   local xmin, xmax, ymin, ymax
   if read == 1 then
