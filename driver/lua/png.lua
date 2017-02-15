@@ -82,14 +82,21 @@ function vertical_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
 end
 
 function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
-
-  if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == false then
+  --io.write("Going here is: ", x0, " ", y0, " ", x1, " ", y1, "\n")
+  --io.write("Bounding box: ", xmin, " ", ymin, " ", xmax, " ", ymax, "\n")
+  if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  	vertical_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
     return true
-  elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == false then
+  elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  	vertical_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+  	--print(x0,y0,x1,y1, "flaaaaaaaaaaag")
     return true
-  elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == false then
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  	horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+    --print(x0,y0,x1,y1,xmin,ymin,xmax,ymax, "flaag")
     return true
-  elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == false then
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  	horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
     return true
   else
     return false
@@ -340,7 +347,7 @@ local function createBoundingBox(bb, read)
     ymin = vymin
   end
 
-  return xmin,xmax,ymin,ymax
+  return xmin,ymin,xmax,ymax
 end
 
 -- Função que diferencia scenes como branches ou leafs
@@ -367,7 +374,7 @@ function testSegment(tree, ind, shape, segment_num)
 
 	local xmin,ymin,xmax,ymax = unpack(tree[ind].boundingBox,1,4)
 
-		--Olha a scene original (Apenas )
+		--Olha a scene original
 		local instruction = shape.instructions[segment_num]
 		--print(instruction)
 
@@ -386,6 +393,12 @@ function testSegment(tree, ind, shape, segment_num)
 			--print(xclose,yclose)
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose) end
+			--io.write("Bounding box: ", xmin, " ", ymin, " ", xmax, " ", ymax, "\n")
+			--io.write("x0: ", x0, " y0: ", y0, " xclose: ", xclose, " yclose: ", yclose, "\n")
+			--print(insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0))
+			--print(insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose))
+			--print(intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose))
+			--print("\n")
 			return intersection
 		end
 
@@ -829,9 +842,9 @@ function _M.accelerate(scene, viewport)
    	
    	--UNIT TEST - TREE[IND].DATA FILLING:
 
-   	for i=1,#tree["01"].data do
+   	for i=1,#tree["04"].data do
    		io.write(i,": ")
-   		for j in ipairs(tree["01"].data[i]) do
+   		for j in ipairs(tree["04"].data[i]) do
    			io.write(j," ")
    		end
    		io.write("\n")
