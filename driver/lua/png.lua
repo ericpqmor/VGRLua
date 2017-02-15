@@ -41,7 +41,7 @@ function accel_circle(scene, shape)
 end
 
 function insideBoundingBox(xmin, ymin, xmax, ymax, x, y)
-	return xmin <= x and x <= xmax and ymin <= y and y <= ymax 
+	return xmin <= x and x < xmax and ymin <= y and y < ymax 
 end
 
 ----------------------------------------
@@ -56,7 +56,7 @@ function horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
 	local test = false
 	local wind_num = 0
 
-	if ymin <= y and y < ymax and x <= xmax then
+	if ymin <= y and y < ymax and x < xmax then
 		if x <= xmin then test = true
 		else test = horizontal_test_linear_segment(x0, y0, x1, y1, x, y) end
 	end
@@ -73,7 +73,7 @@ function vertical_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
   local test = false
   local wind_num = 0
 
-  if xmin <= x and x < xmax and y > ymin then 
+  if xmin <= x and x < xmax and y >= ymin then 
     if y >= ymax then test = true
     else test = vertical_test_linear_segment(x0, y0, x1, y1, x, y) end
   end
@@ -350,84 +350,56 @@ function isLeaf(tree, ind, maxdepth, maxseg)
   else return true end 
 end
 
-local function push_data(path, ...)
-    local data = path.data
-    local n = #data
-    for i = 1, select("#", ...) do
-        data[n+i] = select(i, ...)
-    end
-end
-
-local function push_instruction(path, type, rewind)
-    rewind = rewind or -2
-    local instructions_n = #path.instructions+1
-    local data_n = #path.data+1
-    path.instructions[instructions_n] = type
-    path.offsets[instructions_n] = data_n+rewind
-end
-
 function fillData(scene, tree, fatherInd, ind)
 	for k in ipairs(tree[fatherInd].data) do
 		local shape = scene.shapes[k]
 		tree[ind].data[k] = {}
 		for segment_num in ipairs(tree[fatherInd].data[k]) do
-			local begin = false
-			local dat = 1
-			local xclose, yclose
-			if testSegment(tree, ind, shape, segment_num, begin, dat, xclose, yclose) == true then
+			if testSegment(tree, ind, shape, segment_num) == true then
 				--Adiciona no fim do vetor tree[ind].data[k] (Que é o vetor de paths)
-				tree[ind].data[k][#tree[ind].data[k] + 1] = l
+				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
 			end
 		end
 	end
 end
 
-function testSegment(tree, ind, shape, segment_num, begin, dat, xclose, yclose)
+function testSegment(tree, ind, shape, segment_num)
 
 	local xmin,ymin,xmax,ymax = unpack(tree[ind].boundingBox,1,4)
 
 		--Olha a scene original (Apenas )
 		local instruction = shape.instructions[segment_num]
+		--print(instruction)
 
 		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
-			begin = true
-			dat = dat + 1
-			return true
+			return false
 		end
 				 		
 		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
-			local x0,y0,len = unpack(shape.data,dat,dat+2)
+			local offset = shape.offsets[segment_num]
+			local x0,y0,len = unpack(shape.data, offset, offset+2)
 			local offset_begin = shape.offsets[segment_num - len]
-			local xclose, yclose = unpack(shape.data, offset_begin, offset_begin+1)
+			local xclose, yclose = unpack(shape.data, offset_begin+1, offset_begin+2)
+			--print(x0,y0,xclose,yclose)
 			local intersection = false
 			--Primeiro checa os endpoints
 			--print(xclose,yclose)
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose) end
-			dat = dat + 3
 			return intersection
 		end
 
 		if instruction == "linear_segment" then
-			local x0,y0,x1,y1 = unpack(shape.data,dat,dat+3)
-			if begin == true then
-				xclose, yclose = x0, y0
-				begin = false
-			end
-
+			local offset = shape.offsets[segment_num]
+			local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
 			local intersection = false
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,x1,y1) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1) end
-			dat = dat + 2
 			return intersection
 		end
 
 		if instruction == "cubic_segment" then
 			local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,dat,dat+7)
-			if begin == true then
-				xclose, yclose = x0, y0
-				begin = false
-			end
 
 			dat = dat + 6
 		end
@@ -496,7 +468,6 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
 
     --Criação de bounding boxes
     local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
-    print(xmin,ymin,xmax,ymax)
     tree[ind].boundingBox = {xmin,ymin,xmax,ymax}
 
     tree[ind].depth = tree[fatherInd].depth + 1
@@ -860,7 +831,7 @@ function _M.accelerate(scene, viewport)
 
    	for i=1,#tree["01"].data do
    		io.write(i,": ")
-   		for j=1,#tree["04"].data[i] do
+   		for j in ipairs(tree["01"].data[i]) do
    			io.write(j," ")
    		end
    		io.write("\n")
