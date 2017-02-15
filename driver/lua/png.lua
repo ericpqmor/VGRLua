@@ -345,6 +345,38 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 	return 0
 end
 
+-----------------------------------------
+--[[		SHORTCUT TREE 			 ]]--
+-----------------------------------------
+local function createBoundingBox(bb, read)
+  local xmin, xmax, ymin, ymax
+  local vxmin, vymin, vxmax, vymax = unpack(bb,1,4)
+  local Dx = (vxmin + vxmax)/2
+  local Dy = (vymin + vymax)/2
+  if read == 1 then
+    xmax = vxmin + Dx
+    xmin = vxmin
+    ymax = vymin + 2*Dy
+    ymin = vymin + Dy
+  elseif read == 2 then
+    xmax = vxmin + 2*Dx
+    xmin = vxmin + Dx
+    ymax = vymin + 2*Dy
+    ymin = vymin + Dy
+  elseif read == 3 then
+    xmax = vxmin + Dx
+    xmin = vxmin
+    ymax = vymin + Dy
+    ymin = vymin
+  elseif read == 4 then
+    xmax = vxmin + 2*Dx
+    xmin = vxmin + Dx
+    ymax = vymin + Dy
+    ymin = vymin
+  end
+
+  return xmin,xmax,ymin,ymax
+end
 
 -- Função que diferencia scenes como branches ou leafs
 -- LEMBRAR DE USÁ-LA NO SAMPLE
@@ -372,6 +404,7 @@ end
 function ShapeInsideScene(scene, shape, new_path)
 
 	local xmin,ymin,xmax,ymax = unpack(scene.boundingBox,1,4)
+	--print(xmin,ymin,xmax,ymax)
 	local hasSegment = false
 	local begin = false
 	local dat = 1
@@ -395,8 +428,7 @@ function ShapeInsideScene(scene, shape, new_path)
 			if intersection == true then hasSegment = true end
 
 			if intersection == true then
-				print("x0: ",x0," y0:",y0,"x1:",xclose,"y1:",yclose)
-				push_data(new_path, x0, y0, xclose, yclose)
+				push_data(new_path, x0, y0)
 				push_instruction(new_path, instruction)
 			end
 
@@ -411,14 +443,15 @@ function ShapeInsideScene(scene, shape, new_path)
 				begin = false
 			end
 			local intersection = false
-			--Primeiro checa os endpoints
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,x1,y1) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1) end
 			if intersection == true then hasSegment = true end
 
 			if intersection == true then
-				print("x0:",x0,"y0:",y0,"x1:",x1,"y1:",y1,"\n")
-				push_data(new_path, x0, y0, x1, y1)
+				--Pequena gambiarra para marcar o início de cada path
+				if i == 1 then push_data(new_path, x0, y0, x1, y1)
+				else push_data(new_path, x1, y1) end
+					
 				push_instruction(new_path, instruction)
 			end
 
@@ -471,7 +504,6 @@ Toda scene (Incluindo a scene original, mesmo sendo branch ou leaf, será compos
 	elements -> Outra table originária da scene
 	
 	shapes -> Table que contém todos os shapes (No caso, todos os shapes são paths ou circles) que intersectam a scene. 
-	Obs.: FALTA IMPLEMENTAR TEST ShapeInsideScene
 
 	id -> Toda scene terá seu ID que a identificará e será único a ela. Toda scene herda o ID da scene pai concatenado com
 	"1", "2", "3" ou "4", dependendo se é a subdivisão superior esquerda, superior direita, inferior esquerda ou inferior direita.
@@ -489,8 +521,6 @@ Toda scene (Incluindo a scene original, mesmo sendo branch ou leaf, será compos
 
 	child -> Toda scene possui uma table scene.child que armazena suas subscenes (Por exemplo: A scene["0"] possui scene.child = { "01": scene nova, 
 	"02": scene nova, "03": scene nova, "04": scene nova})
-
-
 ]]--
 
 function subdivide(fatherScene, maxdepth, maxseg)
@@ -504,16 +534,21 @@ function subdivide(fatherScene, maxdepth, maxseg)
 
     local xmin,ymin,xmax,ymax = createBoundingBox(fatherScene.boundingBox, i)
     new_scene.boundingBox = {xmin,ymin,xmax,ymax}
+    --print(xmin,ymin,xmax,ymax)
 
     new_scene.depth = fatherScene.depth + 1
     new_scene.segments = 0
 
     for i=1, #fatherScene.shapes do
+      -- A variável contadora i serve para identificar o shape, logo i = shape_id, como esclarecido em scene.lua na hora de definir shape_id
       local shape = fatherScene.shapes[i]
       -- Add elements and paints also
       local new_path = path.path()
 	  if ShapeInsideScene(new_scene, shape, new_path) == true then
-	    new_scene.shapes[#new_scene.shapes+1] = new_path
+	  	-- Perceba que é o mesmo i, logo ainda é o shape_id que será passado;
+	    new_scene.shapes[i] = new_path
+	    new_scene.paints[i] = fatherScene.paints[i]
+	    new_scene.elements[i] = fatherScene.elements[i]
 	    new_scene.segments = new_scene.segments + #new_path.instructions
 	  end
     end
@@ -840,6 +875,15 @@ function _M.accelerate(scene, viewport)
     new_scene.leaf = isLeaf(new_scene, 3, 100)
 
     subdivide(new_scene, 3, 100)
+    local child_scene = new_scene.child["01"]
+    for i=1,#child_scene.shapes do
+    	local shape = child_scene.shapes[i]
+    	for j=1,#shape.data do io.write(shape.data[j], " ") end
+    end 
+    --io.write("\n")
+
+    --print(child_scene.boundingBox[1], child_scene.boundingBox[2], child_scene.boundingBox[3], child_scene.boundingBox[4])
+
 	return new_scene
 end
 
