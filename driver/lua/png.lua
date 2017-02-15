@@ -41,7 +41,7 @@ function accel_circle(scene, shape)
 end
 
 function insideBoundingBox(xmin, ymin, xmax, ymax, x, y)
-	return xmin <= x and x < xmax and ymin <= y and y < ymax 
+	return xmin <= x and x < xmax and ymin <= y and y < ymax
 end
 
 ----------------------------------------
@@ -73,7 +73,7 @@ function vertical_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
   local test = false
   local wind_num = 0
 
-  if xmin <= x and x < xmax and y >= ymin then 
+  if xmin <= x and x < xmax and y >= ymin then
     if y >= ymax then test = true
     else test = vertical_test_linear_segment(x0, y0, x1, y1, x, y) end
   end
@@ -84,18 +84,18 @@ end
 function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
   --io.write("Going here is: ", x0, " ", y0, " ", x1, " ", y1, "\n")
   --io.write("Bounding box: ", xmin, " ", ymin, " ", xmax, " ", ymax, "\n")
-  if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	vertical_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
     return true
-  elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	vertical_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
   	--print(x0,y0,x1,y1, "flaaaaaaaaaaag")
     return true
-  elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
     --print(x0,y0,x1,y1,xmin,ymin,xmax,ymax, "flaag")
     return true
-  elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and 
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
     return true
   else
@@ -141,7 +141,7 @@ function vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diago
         else
           test = implicit_vertical_quadratic_test(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x-x0,y-y0)
         end
-      end 
+      end
     end
   end
 
@@ -174,7 +174,7 @@ function horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,dia
             test = implicit_horizontal_quadratic_test(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x-x0,y-y0)
           end
         end
-      end 
+      end
     end
   end
 
@@ -223,7 +223,7 @@ function rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ymin,xmax,y
 				else
 					test = implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
 				end
-			end	
+			end
 		end
 	end
 
@@ -249,7 +249,7 @@ end
 
 function implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,x,y)
 	local valor = y*(a + y*(b*y + c)) + x*(d + y*(e + y*f) + x*(g + y*h + x*i))
-	return sign*valor <	 0 
+	return sign*valor <	 0
 end
 
 function insideTriangle(x0,y0,x1,y1,x2,y2,x3,y3,x,y)
@@ -257,8 +257,8 @@ function insideTriangle(x0,y0,x1,y1,x2,y2,x3,y3,x,y)
 	local xi, yi = x1*(x3*y2-x2*y3)/den, y1*(x3*y2-x2*y3)/den
 
 	local wind_num = 0
-	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x0,y0,x3,y3,x,y,math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)),"odd",math.min(y0,y3),math.max(y0,y3)) 
-	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x3,y3,xi,yi,x,y,math.min(x3,xi),math.min(y3,yi),math.max(x3,xi),math.max(y3,yi)),"odd",math.min(y0,y3),math.max(y0,y3)) 
+	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x0,y0,x3,y3,x,y,math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)),"odd",math.min(y0,y3),math.max(y0,y3))
+	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x3,y3,xi,yi,x,y,math.min(x3,xi),math.min(y3,yi),math.max(x3,xi),math.max(y3,yi)),"odd",math.min(y0,y3),math.max(y0,y3))
 	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x0,y0,xi,yi,x,y,math.min(x0,xi),math.min(y0,yi),math.max(x0,xi),math.max(y0,yi)),"odd",math.min(y0,y3),math.max(y0,y3))
 
 	return wind_num == 1
@@ -308,13 +308,71 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,coefs,xmin,ymin,xmax,ymax,diagon
 						test = false
 					end
 				end
-			end	
+			end
 		end
 	end
 
 	return test
 end
 
+-----------------------------------------
+--[[      SHORTCUTS          ]] --
+----------------------------------------
+local function LinearIntersection(x0,y0,x1,y1, xmin, ymin, xmax, ymax)
+  if vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax+ 0.00005, ymin) == false then
+  --   print(true)
+    return true
+  else
+    return false
+  end
+end
+
+
+local function CreateShortcuts(scene,data, bb)
+local xmin, ymin, xmax, ymax = bb[1], bb[2], bb[3], bb[4]
+local shortcuts = {}
+-- for k,el in pairs(data[1]) do print(k,el) print(scene.shapes[1].instructions[el]) end
+for i = 1, #data do
+  shortcuts[i] = {}
+  if data[i] ~= nil then
+    for j = 1, #data[i] do
+      local instruction = data[i][j]
+      local offset = scene.shapes[i].offsets[instruction]
+      if scene.shapes[i].instructions[instruction] == 'linear_segment' then
+        local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
+        if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+          if (x1-x0) > 0 then
+            x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+          else
+            x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+          end
+          table.insert(shortcuts[i],x0s)
+          table.insert(shortcuts[i], y0s)
+          table.insert(shortcuts[i], x1s)
+          table.insert(shortcuts[i], y1s)
+        end
+      elseif scene.shapes[i].instructions[instruction] == 'end_open_contour' or scene.shapes[i].instructions[instruction] == 'end_closed_contour' then
+        local x0, y0, len = unpack(scene.shapes[i].data, offset, offset+2)
+        local begin_off = scene.shapes[i].offsets[instruction-len]
+        local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
+        if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+          if (x1-x0) > 0 then
+            x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+          else
+            x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+          end
+          table.insert(shortcuts[i],x0s)
+          table.insert(shortcuts[i], y0s)
+          table.insert(shortcuts[i], x1s)
+          table.insert(shortcuts[i], y1s)
+        end
+      end
+    end
+  end
+end
+
+  return shortcuts --- tabela formato {shape1{shortcuts},shape2{}}
+end
 
 -----------------------------------------
 --[[		SHORTCUT TREE 			 ]]--
@@ -354,7 +412,7 @@ end
 -- LEMBRAR DE USÁ-LA NO SAMPLE
 function isLeaf(tree, ind, maxdepth, maxseg)
   if 1 < tree[ind].segments and tree[ind].segments > maxseg and tree[ind].depth < maxdepth then return false
-  else return true end 
+  else return true end
 end
 
 function fillData(scene, tree, fatherInd, ind)
@@ -381,7 +439,7 @@ function testSegment(tree, ind, shape, segment_num)
 		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
 			return false
 		end
-				 		
+
 		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
 			local offset = shape.offsets[segment_num]
 			local x0,y0,len = unpack(shape.data, offset, offset+2)
@@ -416,7 +474,7 @@ function testSegment(tree, ind, shape, segment_num)
 
 			dat = dat + 6
 		end
-			
+
 		if instruction == "quadratic_segment" then
 			local x0,y0,x1,y1,x2,y2 = unpack(shape.data,dat,dat+5)
 			if begin == true then
@@ -424,7 +482,7 @@ function testSegment(tree, ind, shape, segment_num)
 				begin = false
 			end
 
-			dat = dat + 4		
+			dat = dat + 4
 		end
 
 		if instruction == "rational_quadratic_segment" then
@@ -436,7 +494,7 @@ function testSegment(tree, ind, shape, segment_num)
 
 			dat = dat + 5
 		end
-	
+
 	return hasSegment
 end
 
@@ -487,9 +545,10 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
     tree[ind].segments = 0
 
     fillData(scene, tree, fatherInd, ind)
-
     if isLeaf(tree, ind, maxdepth, maxseg) == true then
-      tree[ind].leaf = true 
+      tree[ind].leaf = true
+      tree[ind].shortcuts = CreateShortcuts(scene, tree[ind].data, tree[ind].boundingBox)
+      -- for k,el in pairs(tree[ind].shortcuts[1]) do print(k,el) end
     else
       tree[ind].leaf = false
       subdivide(scene, tree, ind, maxdepth, maxseg)
@@ -578,7 +637,7 @@ function _M.accelerate(scene, viewport)
 		transf = transf*inverted
 	end
 
-	function pe(self, winding_rule, shape, paint) 
+	function pe(self, winding_rule, shape, paint)
 			if shape.type == "circle" then
 				accel_circle(scene, shape)
 			elseif shape.type ~= "path" then shape = shape:as_path(shape, shape.xf) end
@@ -598,17 +657,17 @@ function _M.accelerate(scene, viewport)
 		    local begin = false
 		    local xclose, yclose
 		    local vxmin, vymin, vxmax, vymax
-	   			
+
 		    function bcc(self)
-		    	scene.segments = scene.segments + 1 
+		    	scene.segments = scene.segments + 1
 				begin = true
 			end
-		  
+
 			function boc(self)
-				scene.segments = scene.segments + 1 
+				scene.segments = scene.segments + 1
 				begin = true
 			end
-		 
+
 			function ecc(self, x0, y0)
 				scene.segments = scene.segments + 1
 				if begin == true then
@@ -625,7 +684,7 @@ function _M.accelerate(scene, viewport)
 				self.bound[#self.bound+1] = {vxmin, vymin, vxmax, vymax}
 				self.diagonal[#self.diagonal+1] = {}
 
-				self.winding[#self.winding + 1] = 
+				self.winding[#self.winding + 1] =
 					function(x, y, xclose, yclose, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 						return applyWindingNumber(horizontal_linear_test(x0,y0,xclose,yclose,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,yclose)
@@ -649,7 +708,7 @@ function _M.accelerate(scene, viewport)
 
 				self.diagonal[#self.diagonal+1] = {}
 				-- Winding test
-				self.winding[#self.winding + 1] = 
+				self.winding[#self.winding + 1] =
 					function(x, y, xclose, yclose, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 						return applyWindingNumber(horizontal_linear_test(x0,y0,xclose,yclose,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,yclose)
@@ -666,7 +725,7 @@ function _M.accelerate(scene, viewport)
 				local vxmin = math.min(x0, x1)
 				local vymin = math.min(y0, y1)
 				local vxmax = math.max(x0, x1)
-				local vymax = math.max(y0, y1) 
+				local vymax = math.max(y0, y1)
 				self.bound[#self.bound+1] = {vxmin, vymin, vxmax, vymax}
 
 				updatePathBoundingBox(x0,y0,x1,y1)
@@ -674,7 +733,7 @@ function _M.accelerate(scene, viewport)
 
 				self.diagonal[#self.diagonal+1] = {}
 
-				self.winding[#self.winding + 1] = 
+				self.winding[#self.winding + 1] =
 					function(x, y, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 						return applyWindingNumber(horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,y1)
@@ -710,9 +769,9 @@ function _M.accelerate(scene, viewport)
 				end
 			end
 
-			function ds(self, x0, y0, dx0, dy0, dx1, dy1, x1, y1) 
+			function ds(self, x0, y0, dx0, dy0, dx1, dy1, x1, y1)
 			end
-		  
+
 			function qs(self, x0, y0, x1, y1, x2, y2)
 				scene.segments = scene.segments + 1
 				if begin == true then
@@ -725,17 +784,17 @@ function _M.accelerate(scene, viewport)
 				vxmax = math.max(x0, x2)
 				vymax = math.max(y0, y2)
 				self.bound[#self.bound+1] = {vxmin, vymin, vxmax, vymax}
-				
+
 				updatePathBoundingBox(x0,y0,x2,y2)
 				self.coef[#self.coef+1] = {}
 				self.diagonal[#self.diagonal+1] = horizontal_test_linear_segment(x0,y0,x2,y2,x1,y1)
 				--Implicitization
-				self.winding[#self.winding+1] = 
+				self.winding[#self.winding+1] =
 				function(x,y,winding_rule,count)
 					local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 					local diagonal = self.diagonal[count]
 					return applyWindingNumber(horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal),winding_rule,y0,y2)
-				end			
+				end
 			end
 
 			function rqs(self, x0, y0, x1, y1, w1, x2, y2)
@@ -762,19 +821,19 @@ function _M.accelerate(scene, viewport)
 					return applyWindingNumber(rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,self.coef[count],xmin,ymin,xmax,ymax,self.diagonal[count]),winding_rule,y0,y2)
 				end
 			end
-				  
+
 			local forward = {
 				  diagonal={},
 				  bound={},
 				  coef={},
 				  winding={},
-				  begin_closed_contour=bcc, 
-				  begin_open_contour=boc, 
-				  end_closed_contour=ecc, 
-				  end_open_contour=eoc, 
-				  linear_segment=ls, 
+				  begin_closed_contour=bcc,
+				  begin_open_contour=boc,
+				  end_closed_contour=ecc,
+				  end_open_contour=eoc,
+				  linear_segment=ls,
 				  quadratic_segment=qs,
-				  cubic_segment = cs, 
+				  cubic_segment = cs,
 				  degenerate_segment=ds,
 				  rational_quadratic_segment = rqs
 			}
@@ -799,20 +858,20 @@ function _M.accelerate(scene, viewport)
 
 	function se(self, winding_rule, shape)
 		element = element + 1
-	end 
+	end
 
 	local forward_scene = {
 		data={},
 		-- Bracket types
-		begin_clip=bgc, 
-		activate_clip=atc, 
-		end_clip=enc, 
-		begin_fade=bgf, 
+		begin_clip=bgc,
+		activate_clip=atc,
+		end_clip=enc,
+		begin_fade=bgf,
 		end_fade=enf,
 		begin_blur=bgb,
 		end_blur=enb,
 		begin_transform=bgt,
-		end_transform=ent, 
+		end_transform=ent,
 		-- Element types
 		painted_element=pe,
 		stencil_element=se,
@@ -839,7 +898,7 @@ function _M.accelerate(scene, viewport)
 
     local tree = initializeTree(new_scene, viewport)
     subdivide(new_scene, tree, "0", 3, 100)
-   	
+
    	--UNIT TEST - TREE[IND].DATA FILLING:
 
    	for i=1,#tree["04"].data do
@@ -848,7 +907,7 @@ function _M.accelerate(scene, viewport)
    			io.write(j," ")
    		end
    		io.write("\n")
-   	end 
+   	end
 
 	return new_scene
 end
@@ -857,7 +916,7 @@ end
 --[[	TRANSPARENCY AND GRADIENT FUNCTIONS 	]]--
 ----------------------------------------------------
 
-local function blend(r2,g2,b2,a2,r1,g1,b1,a1) 
+local function blend(r2,g2,b2,a2,r1,g1,b1,a1)
 	local alpha = a1+(1-a1)*a2
 	local r,g,b
 	if util.is_almost_zero(alpha) then
@@ -873,9 +932,9 @@ end
 
 local function rampf(rx,gx,bx,ax,rk,gk,bk,ak, pk, p, px)
 
-	local r = ((pk-p)*rx + (p-px)*rk)/(pk-px)	
-	local g = ((pk-p)*gx + (p-px)*gk)/(pk-px)	
-	local b = ((pk-p)*bx + (p-px)*bk)/(pk-px)	
+	local r = ((pk-p)*rx + (p-px)*rk)/(pk-px)
+	local g = ((pk-p)*gx + (p-px)*gk)/(pk-px)
+	local b = ((pk-p)*bx + (p-px)*bk)/(pk-px)
 	local a = ((pk-p)*ax + (p-px)*ak)/(pk-px)
 	return r,g,b,a
 end
@@ -1060,7 +1119,7 @@ end
 
 function test_circle(scene, shape, x, y)
         local xt, yt = shape.transf:apply(x, y, 1)
-        
+
         local xt = xt - shape.cx
         local yt = yt - shape.cy
 
@@ -1089,7 +1148,7 @@ function wind(accel, i, x, y)
 			begin = true
 			dat = dat + 1
 		end
-				 		
+
 		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
 			local x0,y0 = unpack(path.data,dat,dat+1)
 			wind_num = wind_num + path.winding[cont](x,y,xclose,yclose,element.winding_rule,cont)
@@ -1119,7 +1178,7 @@ function wind(accel, i, x, y)
 			cont = cont + 1
 			dat = dat + 6
 		end
-			
+
 		if instruction == "quadratic_segment" then
 			local x0,y0,x1,y1,x2,y2 = unpack(path.data,dat,dat+5)
 			if begin == true then
@@ -1128,7 +1187,7 @@ function wind(accel, i, x, y)
 			end
 			wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
 			cont = cont + 1
-			dat = dat + 4		
+			dat = dat + 4
 		end
 
 		if instruction == "rational_quadratic_segment" then
@@ -1166,19 +1225,19 @@ local function sample(accel, x, y, path_num)
     local rec = false
  	if path_num ~= nil and path_num > 0 then rec = true end
  	for i = #accel.elements,1,-1 do
-	 	if rec == false or (rec == true and i == path_num) then 
+	 	if rec == false or (rec == true and i == path_num) then
 	 		local element = accel.elements[i]
 	    	local shape = accel.shapes[i]
 	    	local paint = accel.paints[i]
 	    	local pxmin, pymin, pxmax, pymax = unpack(shape.boundingBox, 1, 4)
 	    	if insideBoundingBox(pxmin, pymin, pxmax, pymax, x, y) == true then
-	    		local wind_num = wind(accel,i,x,y) 
+	    		local wind_num = wind(accel,i,x,y)
 				if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
 						r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
 		        end
 
-		        if util.is_almost_one(a) then 
-		        	return r,g,b,a 
+		        if util.is_almost_one(a) then
+		        	return r,g,b,a
 		       	end
 		    end
 		end
@@ -1297,7 +1356,7 @@ function _M.render(tree, viewport, file, args)
     if ty ~= nil then
     	vymin = vymin - ty
     	vymax = vymax - ty
-    end 
+    end
     -- Get image width and height from viewport
     local width, height = vxmax-vxmin, vymax-vymin
     -- Allocate output image
