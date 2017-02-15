@@ -49,10 +49,10 @@ end
 ----------------------------------------
 function horizontal_test_linear_segment(x1, y1, x2, y2, x, y)
 	local valor = (y2 - y1)*x + (x1 - x2)*y - x1*(y2 - y1) - y1*(x1 - x2)
-	return (y2 - y1)*valor < 0 and ((y1<=y and y<y2) or (y2<=y and y<y1))
+	return (y2 - y1)*valor < 0
 end
 
-function horizontal_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
+function horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
 	local test = false
 	local wind_num = 0
 
@@ -61,24 +61,15 @@ function horizontal_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax
 		else test = horizontal_test_linear_segment(x0, y0, x1, y1, x, y) end
 	end
 
-	if test then
-		if winding_rule == "non-zero" then
-			if y0 > y1 then wind_num = -1 end
-			if y0 < y1 then wind_num =  1 end
-		else
-			wind_num = 1
-		end
-	end
-
-	return wind_num
+	return test
 end
 
 function vertical_test_linear_segment(x1, y1, x2, y2, x, y)
   local valor = (y2 - y1)*x + (x1 - x2)*y - x1*(y2 - y1) - y1*(x1 - x2)
-  return (x2 - x1)*valor < 0 and ((x1<=x and x<x2) or (x2<=x and x<x1))
+  return (x2 - x1)*valor < 0
 end
 
-function vertical_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
+function vertical_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
   local test = false
   local wind_num = 0
 
@@ -87,27 +78,18 @@ function vertical_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
     else test = vertical_test_linear_segment(x0, y0, x1, y1, x, y) end
   end
 
-	if test then
-		if winding_rule == "non-zero" then
-			if x0 > x1 then wind_num = -1 end
-			if x0 < x1 then wind_num =  1 end
-		else
-			wind_num = 1
-		end
-	end
-
-	return wind_num
+  return test
 end
 
 function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
 
-  if vertical_test_linear_segment(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == false then
+  if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == false then
     return true
-  elseif vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == false then
+  elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == true and vertical_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == false then
     return true
-  elseif horizontal_test_linear_segment(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_test_linear_segment(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == false then
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,xmin,ymin,xmax,ymax) == false then
     return true
-  elseif horizontal_test_linear_segment(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_test_linear_segment(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == false then
+  elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,xmin,ymin,xmax,ymax) == true and horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,xmin,ymin,xmax,ymax) == false then
     return true
   else
     return false
@@ -117,7 +99,6 @@ end
 ----------------------------------------
 --[[ 	QUADRATICS FUNCTIONS 		]]--
 ----------------------------------------
-
 function implicit_vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y)
     local valor = 4*(y*x1-y1*x)*(y2*x1-y1*x2)-((2*y1-y2)*x+(x2-2*x1)*y)*((2*y1-y2)*x+(x2-2*x1)*y)
     local sign = 2*x2*(y1*x2 - y2*x1)
@@ -134,7 +115,7 @@ function implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y)
     return valor < 0
 end
 
-function vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+function vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal)
   local test = false
   if xmin <= x and x < xmax and y > ymin then
     if y >= ymax then test = true
@@ -160,7 +141,7 @@ function vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xm
   return test
 end
 
-function horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+function horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal)
   local test = false
   if ymin <= y and y < ymax and x <= xmax then
     if x <= xmin then test = true
@@ -212,7 +193,7 @@ function implicit_rational_quadratic_test(a,b,c,d,e,sign,x,y)
 	return valor*sign < 0
 end
 
-function rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,winding_rule,coefs,xmin,ymin,xmax,ymax,diagonal)
+function rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ymin,xmax,ymax,diagonal)
 	local test = false
 	local rec = false
 	--if x==45.5 and y==132.5 then rec = true end
@@ -223,14 +204,14 @@ function rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,winding_rule,coefs,xmi
 		else
 		--Inside the bounding box. Diagonal test
 			if diagonal == true then
-				if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
+				if horizontal_test_linear_segment(x0,y0,x2,y2,x,y) == true then
 					test = implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
 				else
 					test = false
 				end
 			else
 				--io.write("I am here being tested by: ", x0, " ", y0, " ", x1, " ", y1, " ", x2, " ", y2, "\n")
-				if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
+				if horizontal_test_linear_segment(x0,y0,x2,y2,x,y) == true then
 					test = true
 				else
 					test = implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
@@ -239,16 +220,7 @@ function rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,winding_rule,coefs,xmi
 		end
 	end
 
-	if test then
-		if winding_rule == "non-zero" then
-			if y0 > y2 then return -1 end
-			if y0 < y2 then return  1 end
-		else
-			return 1
-		end
-	end
-
-	return 0
+	return test
 end
 
 ----------------------------------------
@@ -273,19 +245,19 @@ function implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,x,y)
 	return sign*valor <	 0 
 end
 
-function insideTriangle(x0,y0,x1,y1,x2,y2,x3,y3,winding_rule,x,y)
+function insideTriangle(x0,y0,x1,y1,x2,y2,x3,y3,x,y)
 	local den = (x3-x2)*y1-x1*(y3-y2)
 	local xi, yi = x1*(x3*y2-x2*y3)/den, y1*(x3*y2-x2*y3)/den
 
 	local wind_num = 0
-	wind_num = wind_num + vertical_linear_test(x0,y0,x3,y3,x,y,"odd",math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)) 
-	wind_num = wind_num + vertical_linear_test(x3,y3,xi,yi,x,y,"odd",math.min(x3,xi),math.min(y3,yi),math.max(x3,xi),math.max(y3,yi)) 
-	wind_num = wind_num + vertical_linear_test(x0,y0,xi,yi,x,y,"odd",math.min(x0,xi),math.min(y0,yi),math.max(x0,xi),math.max(y0,yi))
+	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x0,y0,x3,y3,x,y,math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)),"odd",math.min(y0,y3),math.max(y0,y3)) 
+	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x3,y3,xi,yi,x,y,math.min(x3,xi),math.min(y3,yi),math.max(x3,xi),math.max(y3,yi)),"odd",math.min(y0,y3),math.max(y0,y3)) 
+	wind_num = wind_num + applyWindingNumber(horizontal_linear_test(x0,y0,xi,yi,x,y,math.min(x0,xi),math.min(y0,yi),math.max(x0,xi),math.max(y0,yi)),"odd",math.min(y0,y3),math.max(y0,y3))
 
 	return wind_num == 1
 end
 
-function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xmax,ymax,diagonal)
+function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,coefs,xmin,ymin,xmax,ymax,diagonal)
 	local rec = false
 	--if x == 115.5 and y == 35.5 then rec = true end
 	local test = false
@@ -293,15 +265,15 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 	--Do not forget degeneration cases
 	--print(classify(x0,y0,x1,y1,x2,y2,x3,y3))
 	if x0 == x1 and y0 == y1 then
-		return quadratic_test(x0,y0,x2,y2,x3,y3,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+		return horizontal_quadratic_test(x0,y0,x2,y2,x3,y3,x,y,xmin,ymin,xmax,ymax,diagonal)
 	elseif x2 == x3 and y2 == y3 then
-		return quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+		return horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal)
 	end
 
 	if bezier.classify3(x0,y0,x1,y1,x2,y2,x3,y3) == "line or point" then
-		return vertical_linear_test(x0,y0,x3,y3,x,y, winding_rule,xmin,ymin,xmax,ymax)
+		return horizontal_linear_test(x0,y0,x3,y3,x,y,xmin,ymin,xmax,ymax)
 	elseif bezier.classify3(x0,y0,x1,y1,x2,y2,x3,y3) == "quadratic" then
-		return quadratic_test(x0,y0,x1,y1,x3,y3,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+		return horizontal_quadratic_test(x0,y0,x1,y1,x3,y3,x,y,xmin,ymin,xmax,ymax,diagonal)
 
 	end
 
@@ -310,8 +282,8 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 		else
 		--Inside the bounding box. Diagonal test
 			if diagonal == true then
-				if vertical_test_linear_segment(x0,y0,x3,y3,x,y) == true then
-					if insideTriangle(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0,winding_rule,x-x0,y-y0) == true then
+				if horizontal_test_linear_segment(x0,y0,x3,y3,x,y) == true then
+					if insideTriangle(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0,x-x0,y-y0) == true then
 						test = implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,x-x0,y-y0)
 					else
 						test = true
@@ -320,10 +292,10 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 					test = false
 				end
 			else
-				if vertical_test_linear_segment(x0,y0,x3,y3,x,y) == true then
+				if horizontal_test_linear_segment(x0,y0,x3,y3,x,y) == true then
 					test = true
 				else
-					if insideTriangle(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0,winding_rule,x-x0,y-y0) == true then
+					if insideTriangle(0,0,x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0,x-x0,y-y0) == true then
 						test = implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,x-x0,y-y0)
 					else
 						test = false
@@ -333,17 +305,9 @@ function cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xma
 		end
 	end
 
-	if test then
-		if winding_rule == "non-zero" then
-			if y0 > y3 then return -1 end
-			if y0 < y3 then return  1 end
-		else
-			return 1
-		end
-	end
-
-	return 0
+	return test
 end
+
 
 -----------------------------------------
 --[[		SHORTCUT TREE 			 ]]--
@@ -381,8 +345,8 @@ end
 
 -- Função que diferencia scenes como branches ou leafs
 -- LEMBRAR DE USÁ-LA NO SAMPLE
-function isLeaf(new_scene, maxdepth, maxseg)
-  if 1 < new_scene.segments and new_scene.segments > maxseg and new_scene.depth < maxdepth then return false
+function isLeaf(tree, ind, maxdepth, maxseg)
+  if 1 < tree[ind].segments and tree[ind].segments > maxseg and tree[ind].depth < maxdepth then return false
   else return true end 
 end
 
@@ -402,61 +366,60 @@ local function push_instruction(path, type, rewind)
     path.offsets[instructions_n] = data_n+rewind
 end
 
-function ShapeInsideScene(scene, shape, new_path)
+function fillData(scene, tree, fatherInd, ind)
+	for k in ipairs(tree[fatherInd].data) do
+		local shape = scene.shapes[k]
+		tree[ind].data[k] = {}
+		for segment_num in ipairs(tree[fatherInd].data[k]) do
+			local begin = false
+			local dat = 1
+			local xclose, yclose
+			if testSegment(tree, ind, shape, segment_num, begin, dat, xclose, yclose) == true then
+				--Adiciona no fim do vetor tree[ind].data[k] (Que é o vetor de paths)
+				tree[ind].data[k][#tree[ind].data[k] + 1] = l
+			end
+		end
+	end
+end
 
-	local xmin,ymin,xmax,ymax = unpack(scene.boundingBox,1,4)
-	--print(xmin,ymin,xmax,ymax)
-	local hasSegment = false
-	local begin = false
-	local dat = 1
-	local xclose, yclose
+function testSegment(tree, ind, shape, segment_num, begin, dat, xclose, yclose)
 
-	for i=1,#shape.instructions do
-		local instruction = shape.instructions[i]
+	local xmin,ymin,xmax,ymax = unpack(tree[ind].boundingBox,1,4)
+
+		--Olha a scene original (Apenas )
+		local instruction = shape.instructions[segment_num]
 
 		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
 			begin = true
 			dat = dat + 1
+			return true
 		end
 				 		
 		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
-			local x0,y0 = unpack(shape.data,dat,dat+1)
-
+			local x0,y0,len = unpack(shape.data,dat,dat+2)
+			local offset_begin = shape.offsets[segment_num - len]
+			local xclose, yclose = unpack(shape.data, offset_begin, offset_begin+1)
 			local intersection = false
 			--Primeiro checa os endpoints
+			--print(xclose,yclose)
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose) end
-			if intersection == true then hasSegment = true end
-
-			if intersection == true then
-				push_data(new_path, x0, y0)
-				push_instruction(new_path, instruction)
-			end
-
 			dat = dat + 3
+			return intersection
 		end
 
 		if instruction == "linear_segment" then
 			local x0,y0,x1,y1 = unpack(shape.data,dat,dat+3)
-
 			if begin == true then
 				xclose, yclose = x0, y0
 				begin = false
 			end
+
 			local intersection = false
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,x1,y1) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1) end
-			if intersection == true then hasSegment = true end
-
-			if intersection == true then
-				--Pequena gambiarra para marcar o início de cada path
-				if i == 1 then push_data(new_path, x0, y0, x1, y1)
-				else push_data(new_path, x1, y1) end
-					
-				push_instruction(new_path, instruction)
-			end
-
 			dat = dat + 2
+			return intersection
 		end
 
 		if instruction == "cubic_segment" then
@@ -488,8 +451,6 @@ function ShapeInsideScene(scene, shape, new_path)
 
 			dat = dat + 5
 		end
-
-	end
 	
 	return hasSegment
 end
@@ -499,72 +460,95 @@ end
 ----------------------------------
 |	ESTRUTURA DA SHORTCUT TREE	 |
 ----------------------------------
-Toda scene (Incluindo a scene original, mesmo sendo branch ou leaf, será composta por):
-	paints -> Table que contém os dados originais da pintura da scene
+A tree terá uma estrutura própria associada, que será explicada logo abaixo. Cada galho/folha é chamado de tree[ind]. Diferente da versão anterior, teremos apenas uma scene: a original.
 
-	elements -> Outra table originária da scene
-	
-	shapes -> Table que contém todos os shapes (No caso, todos os shapes são paths ou circles) que intersectam a scene. 
+	ind -> "0", "01", "02", ..., é o índice associado a uma certa bounding box. Cada número representa a escolha de uma bounding box antecessora na subdivisão:
+	 1 para o canto superior esquerdo, 2 para o canto superior direito, 3 para o inferior esquerdo e 4 para o inferior direito. Cada dígito é uma subdivisão.
 
-	id -> Toda scene terá seu ID que a identificará e será único a ela. Toda scene herda o ID da scene pai concatenado com
-	"1", "2", "3" ou "4", dependendo se é a subdivisão superior esquerda, superior direita, inferior esquerda ou inferior direita.
-	Exemplo: A terceira filha da scene "012" é "0123".
+	tree[ind].boundingBox -> Auto-explicativo, trata-se do bounding box associado à cada subdivisão. É uma tabela cheia no formato {xmin, ymin, xmax, ymax}
 
-	leaf -> Identifica se minha scene é uma leaf ou não. É A ÚNICA DIFERENÇA ENTRE UM BRANCH E UMA LEAF. Toda a estrutura restante é idêntica.
-	Serve como critério de parada da função recursiva subdivide().
+	tree[ind].data -> Representa os paths e os segmentos que serão levados em consideração pelos pontos pertencentes àquela região.
+	Formato de tabela cheia: {numero_do_path: {numero_do_segmento, numero_do_segmento, ...} ...}
 
-	boundingBox -> Obviamente, armazena a table boundingBox = {xmin, ymin, xmax, ymax} que representa o bounding box de cada scene.
+	tree[ind].winding -> Outra tabela cheia, guarda o winding_increment relativo ao path representado pelo índice (O path 1 possui o winding number da posição [1] da table).
+	O winding_increment é calculado de acordo com o artigo "Massively Parallel Vector Graphics", 2014.
 
-	depth -> "Profundidade" da scene em relação à Shortcut Tree. O depth da scene inicial é 0 e sua definição é recursiva: 
-		sceneFilho.depth = scenePai.depth + 1
+	tree[ind].seg -> O número de segmentos armazenados.
 
-	segments -> Armazena o número de segmentos de cada scene.
+	tree[ind].depth -> A "profundidade" da árvore, armazena quantas subdivisões fizemos para chegar na região.
 
-	child -> Toda scene possui uma table scene.child que armazena suas subscenes (Por exemplo: A scene["0"] possui scene.child = { "01": scene nova, 
-	"02": scene nova, "03": scene nova, "04": scene nova})
+	tree[ind].leaf -> Flag que verifica se a região delimitada pelo bounding box é ou não uma folha.
+
+	tree[ind].shortcuts -> Tabela cheia que armazena os shortcuts segments relativos ao path do índice.
 ]]--
 
-function subdivide(fatherScene, maxdepth, maxseg)
-  fatherScene.child = {}
+function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
+
   for i=1,4 do
-    new_scene = scene.scene()
+  	local ind = fatherInd .. i
+    print(ind)
 
-    new_scene.id = fatherScene.id .. i
-    print(new_scene.id)
-    fatherScene.child[new_scene.id] = new_scene
+    --Inicializa as tables. As duas últimas serão vazias para todos os ind.
+    tree[ind] = {}
+    tree[ind].data = {}
+    tree[ind].winding = {}
+    tree[ind].shortcuts = {}
 
-    local xmin,ymin,xmax,ymax = createBoundingBox(fatherScene.boundingBox, i)
-    new_scene.boundingBox = {xmin,ymin,xmax,ymax}
-    --print(xmin,ymin,xmax,ymax)
+    --Criação de bounding boxes
+    local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
+    print(xmin,ymin,xmax,ymax)
+    tree[ind].boundingBox = {xmin,ymin,xmax,ymax}
 
-    new_scene.depth = fatherScene.depth + 1
-    new_scene.segments = 0
+    tree[ind].depth = tree[fatherInd].depth + 1
+    tree[ind].segments = 0
 
-    for i=1, #fatherScene.shapes do
-      -- A variável contadora i serve para identificar o shape, logo i = shape_id, como esclarecido em scene.lua na hora de definir shape_id
-      local shape = fatherScene.shapes[i]
-      -- Add elements and paints also
-      local new_path = path.path()
-	  if ShapeInsideScene(new_scene, shape, new_path) == true then
-	  	-- Perceba que é o mesmo i, logo ainda é o shape_id que será passado;
-	    new_scene.shapes[i] = new_path
-	    new_scene.paints[i] = fatherScene.paints[i]
-	    new_scene.elements[i] = fatherScene.elements[i]
-	    new_scene.segments = new_scene.segments + #new_path.instructions
-	  end
-    end
-    if isLeaf(new_scene, maxdepth, maxseg) == true then
-      new_scene.leaf = true 
+    fillData(scene, tree, fatherInd, ind)
+
+    if isLeaf(tree, ind, maxdepth, maxseg) == true then
+      tree[ind].leaf = true 
     else
-      new_scene.leaf = false
-      subdivide(new_scene, maxdepth, maxseg)
+      tree[ind].leaf = false
+      subdivide(scene, tree, ind, maxdepth, maxseg)
     end
   end
+end
+
+function initializeTree(new_scene, viewport)
+	local tree = {}
+	local oxmin, oymin, oxmax, oymax = unpack(viewport,1,4)
+    local ind = "0"
+    tree[ind] = {}
+    tree[ind].boundingBox = {oxmin,oymin,oxmax,oymax}
+    tree[ind].depth = 0
+    tree[ind].segments = 0
+    tree[ind].leaf = isLeaf(tree, ind, 3, 100)
+    tree[ind].winding = {}
+    tree[ind].shortcuts ={}
+    tree[ind].data = {}
+    for i=1,#new_scene.shapes do
+    	tree[ind].data[i] = {}
+    	for j=1,#new_scene.shapes[i].instructions do
+    		tree[ind].data[i][#tree[ind].data[i] + 1] = j
+    	end
+   	end
+   	return tree
 end
 
 -----------------------------------------
 --[[		ACCELERATE FUNCTION 	 ]]--
 -----------------------------------------
+function applyWindingNumber(test, winding_rule, y0, y1)
+	if test then
+		if winding_rule == "non-zero" then
+			if y0 > y1 then return -1 end
+			if y0 < y1 then return  1 end
+		else
+			return 1
+		end
+	end
+
+	return 0
+end
 
 function _M.accelerate(scene, viewport)
 
@@ -660,7 +644,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] = 
 					function(x, y, xclose, yclose, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-						return vertical_linear_test(x0,y0,xclose,yclose,x,y,winding_rule,xmin,ymin,xmax,ymax)
+						return applyWindingNumber(horizontal_linear_test(x0,y0,xclose,yclose,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,yclose)
 					end
 			end
 
@@ -684,7 +668,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] = 
 					function(x, y, xclose, yclose, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-						return vertical_linear_test(x0,y0,xclose,yclose,x,y,winding_rule,xmin,ymin,xmax,ymax)
+						return applyWindingNumber(horizontal_linear_test(x0,y0,xclose,yclose,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,yclose)
 					end
 			end
 
@@ -709,7 +693,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] = 
 					function(x, y, winding_rule, count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-						return vertical_linear_test(x0,y0,x1,y1,x,y,winding_rule,xmin,ymin,xmax,ymax)
+						return applyWindingNumber(horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,y1)
 					end
 			end
 
@@ -727,7 +711,7 @@ function _M.accelerate(scene, viewport)
 				self.bound[#self.bound+1] = {vxmin, vymin, vxmax, vymax}
 				local a,b,c,d,e,f,g,h,i,sign = calculate_cubic_coefs(x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0)
 				self.coef[#self.coef+1] = {a,b,c,d,e,f,g,h,i,sign}
-				self.diagonal[#self.diagonal+1] = vertical_test_linear_segment(x0,y0,x3,y3,x2,y2)
+				self.diagonal[#self.diagonal+1] = horizontal_test_linear_segment(x0,y0,x3,y3,x2,y2)
 				--Update path bounding box
 				updatePathBoundingBox(x0,y0,x3,y3)
 
@@ -738,7 +722,7 @@ function _M.accelerate(scene, viewport)
 					--io.write("Coefficients: ", x0, " ", y0, " ", x1, " ", y1, " ", x2, " ", y2, " ", x3, " ", y3, "\n")
 					local coefs = self.coef[count]
 					local diagonal = self.diagonal[count]
-					return cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,winding_rule,coefs,xmin,ymin,xmax,ymax,diagonal)
+					return applyWindingNumber(cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,coefs,xmin,ymin,xmax,ymax,diagonal),winding_rule,y0,y3)
 				end
 			end
 
@@ -760,13 +744,13 @@ function _M.accelerate(scene, viewport)
 				
 				updatePathBoundingBox(x0,y0,x2,y2)
 				self.coef[#self.coef+1] = {}
-				self.diagonal[#self.diagonal+1] = vertical_test_linear_segment(x0,y0,x2,y2,x1,y1)
+				self.diagonal[#self.diagonal+1] = horizontal_test_linear_segment(x0,y0,x2,y2,x1,y1)
 				--Implicitization
 				self.winding[#self.winding+1] = 
 				function(x,y,winding_rule,count)
 					local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 					local diagonal = self.diagonal[count]
-					return vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,winding_rule,xmin,ymin,xmax,ymax,diagonal)
+					return applyWindingNumber(horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal),winding_rule,y0,y2)
 				end			
 			end
 
@@ -782,7 +766,7 @@ function _M.accelerate(scene, viewport)
 				vxmax = math.max(x0, x2)
 				vymax = math.max(y0, y2)
 				self.bound[#self.bound+1] = {vxmin, vymin, vxmax, vymax}
-				self.diagonal[#self.diagonal+1] = vertical_test_linear_segment(x0,y0,x2,y2,x1/w1,y1/w1)
+				self.diagonal[#self.diagonal+1] = horizontal_test_linear_segment(x0,y0,x2,y2,x1/w1,y1/w1)
 
 				updatePathBoundingBox(x0,y0,x2,y2)
 				local a,b,c,d,e,sign = calculate_rational_quadratic_coefs(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0)
@@ -791,7 +775,7 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding+1] =
 				function(x,y,winding_rule,count)
 					local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-					return rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,winding_rule,self.coef[count],xmin,ymin,xmax,ymax,self.diagonal[count])
+					return applyWindingNumber(rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,self.coef[count],xmin,ymin,xmax,ymax,self.diagonal[count]),winding_rule,y0,y2)
 				end
 			end
 				  
@@ -869,21 +853,18 @@ function _M.accelerate(scene, viewport)
     	end
     end
 
-    local oxmin, oymin, oxmax, oymax = unpack(viewport,1,4)
-    new_scene.boundingBox = {oxmin,oymin,oxmax,oymax}
-    new_scene.id = "0"
-    new_scene.depth = 0
-    new_scene.leaf = isLeaf(new_scene, 3, 100)
+    local tree = initializeTree(new_scene, viewport)
+    subdivide(new_scene, tree, "0", 3, 100)
+   	
+   	--UNIT TEST - TREE[IND].DATA FILLING:
 
-    subdivide(new_scene, 3, 100)
-    local child_scene = new_scene.child["01"]
-    for i=1,#child_scene.shapes do
-    	local shape = child_scene.shapes[i]
-    	for j=1,#shape.data do io.write(shape.data[j], " ") end
-    end 
-    --io.write("\n")
-
-    --print(child_scene.boundingBox[1], child_scene.boundingBox[2], child_scene.boundingBox[3], child_scene.boundingBox[4])
+   	for i=1,#tree["01"].data do
+   		io.write(i,": ")
+   		for j=1,#tree["04"].data[i] do
+   			io.write(j," ")
+   		end
+   		io.write("\n")
+   	end 
 
 	return new_scene
 end
@@ -1207,7 +1188,7 @@ local function sample(accel, x, y, path_num)
 	    	local paint = accel.paints[i]
 	    	local pxmin, pymin, pxmax, pymax = unpack(shape.boundingBox, 1, 4)
 	    	if insideBoundingBox(pxmin, pymin, pxmax, pymax, x, y) == true then
-	    		local wind_num = wind(accel,i,x,y)
+	    		local wind_num = wind(accel,i,x,y) 
 				if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
 						r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
 		        end
