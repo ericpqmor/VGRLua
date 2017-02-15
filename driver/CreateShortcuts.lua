@@ -51,3 +51,16 @@ for i = 1, #data do
 end
   return shortcuts --- tabela formato {shape1{shortcuts},shape2{}}
 end
+
+
+--
+--
+-- local function UpdateWinding(scene,son, father)
+--
+-- for i = 1, #father.data do
+--   son.winding[i] = father.winding[i]
+--   local notin = {}
+--   for j = 1, #father.data
+--
+--   end
+-- end
