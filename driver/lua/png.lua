@@ -353,6 +353,7 @@ local function createBoundingBox(bb, read)
   local vxmin, vymin, vxmax, vymax = unpack(bb,1,4)
   local Dx = (vxmin + vxmax)/2
   local Dy = (vymin + vymax)/2
+
   if read == 1 then
     xmax = vxmin + Dx
     xmin = vxmin
