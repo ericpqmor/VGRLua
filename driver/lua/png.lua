@@ -1033,8 +1033,6 @@ function _M.accelerate(scene, viewport)
     subdivide(new_scene, tree, "0", 3, 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-
-    --[[
    	for i=1,#tree["04"].data do
    		io.write(i,": ")
    		for j in ipairs(tree["04"].data[i]) do
@@ -1042,14 +1040,9 @@ function _M.accelerate(scene, viewport)
    		end
    		io.write("\n")
    	end
-<<<<<<< HEAD
     new_scene.tree = tree
-	return new_scene
-=======
-    ]]--
 
-	return new_scene, tree
->>>>>>> 99f8dcf987bd1dceefecd0feb76e3f36e2c38c65
+    return new_scene
 end
 
 ----------------------------------------------------
@@ -1540,11 +1533,6 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
-<<<<<<< HEAD
-for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
-  print(scene.tree['01'].winding[1])
-=======
->>>>>>> 99f8dcf987bd1dceefecd0feb76e3f36e2c38c65
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
@@ -1563,7 +1551,6 @@ for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
     -- Get image width and height from viewport
     local width, height = vxmax-vxmin, vymax-vymin
     -- Allocate output image
-<<<<<<< HEAD
     local img = image.image(width, height, 4)
 	local time = chronos.chronos()
     -- Rendering loop
@@ -1575,19 +1562,6 @@ for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
             img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
         end
     end
-=======
-          local img = image.image(width, height, 4)
-      	local time = chronos.chronos()
-          -- Rendering loop
-          for i = 1, height do
-      	stderr("\r%5g%%", floor(1000*i/height)/10)
-              local y = vymin+i-1.+.5
-              for j = 1, width do
-                  local x = vxmin+j-1.+.5
-                  img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
-              end
-          end
->>>>>>> 99f8dcf987bd1dceefecd0feb76e3f36e2c38c65
 	stderr("\n")
 	stderr("rendering in %.3fs\n", time:elapsed())
 	time:reset()
