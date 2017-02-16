@@ -438,7 +438,8 @@ function isLeaf(tree, ind, maxdepth, maxseg)
 end
 
 function fillData(scene, tree, fatherInd, ind)
-	for k in ipairs(tree[fatherInd].data) do
+
+  for k in ipairs(tree[fatherInd].data) do
 		local shape = scene.shapes[k]
 		tree[ind].data[k] = {}
     tree[ind].winding[k] = 0
@@ -448,7 +449,7 @@ function fillData(scene, tree, fatherInd, ind)
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
-      --   print(tree[ind].winding[k])
+      -- print(tree[ind].winding[k])
       end
 		end
 	end
@@ -934,8 +935,8 @@ function _M.accelerate(scene, viewport)
    		end
    		io.write("\n")
    	end
-
-	return new_scene, tree
+    new_scene.tree = tree
+	return new_scene
 end
 
 ----------------------------------------------------
@@ -1152,85 +1153,94 @@ function test_circle(scene, shape, x, y)
         if xt*xt + yt*yt < (shape.r)*(shape.r) then return 1 else return 0 end
 end
 
-function wind(accel, i, x, y)
+function wind(accel, i, i_seg, x, y)
  	local element = accel.elements[i]
-    local path = accel.shapes[i]
-    local paint = accel.paints[i]
-	local wind_num = 0
-	local cont = 1
-
-	if path.type == "circle" then
+  local path = accel.shapes[i]
+  local paint = accel.paints[i]
+	-- local cont = 1
+  if path.type == "circle" then
 		return test_circle(accel,path,x,y)
 	end
 
-	local begin = false
-	local dat = 1
-	local xclose, yclose
+  local instruction = path.instructions[i_seg]
+  local offset = path.offsets[i_seg]
 
-	for i=1,#path.instructions do
-		local instruction = path.instructions[i]
-
-		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
-			begin = true
-			dat = dat + 1
-		end
-
-		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
-			local x0,y0 = unpack(path.data,dat,dat+1)
-			wind_num = wind_num + path.winding[cont](x,y,xclose,yclose,element.winding_rule,cont)
-			cont = cont + 1
-			dat = dat + 3
-		end
-
-		if instruction == "linear_segment" then
-			local x0,y0,x1,y1 = unpack(path.data,dat,dat+3)
-			if begin == true then
-				xclose, yclose = x0, y0
-				begin = false
-			end
-
-			wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
-			cont = cont + 1
-			dat = dat + 2
-		end
-
-		if instruction == "cubic_segment" then
-			local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(path.data,dat,dat+7)
-			if begin == true then
-				xclose, yclose = x0, y0
-				begin = false
-			end
-			wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont,x0,y0,x1,y1,x2,y2,x3,y3)
-			cont = cont + 1
-			dat = dat + 6
-		end
-
-		if instruction == "quadratic_segment" then
-			local x0,y0,x1,y1,x2,y2 = unpack(path.data,dat,dat+5)
-			if begin == true then
-				xclose, yclose = x0, y0
-				begin = false
-			end
-			wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
-			cont = cont + 1
-			dat = dat + 4
-		end
-
-		if instruction == "rational_quadratic_segment" then
-			local x0,y0,x1,y1,w1,x2,y2 = unpack(path.data,dat,dat+6)
-			if begin == true then
-				xclose, yclose = x0, y0
-				begin = false
-			end
-			wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
-			cont = cont + 1
-			dat = dat + 5
-		end
-
+	if instruction == "end_open_contour" or instruction == "end_closed_contour" then
+		local x0,y0,len = unpack(path.data,offset,offset+2)
+    local offbegin = path.offsets[i_seg - len]
+    local x1, y1 = unpack(path.data, offbegin+1, offbegin+2)
+    if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+      return util.sign(x1-x0)
+    else
+      return 0
+    end
+		-- wind_num = wind_num + path.winding[cont](x,y,xclose,yclose,element.winding_rule,cont)
+		-- cont = cont + 1
+		-- dat = dat + 3
+  elseif instruction == "linear_segment" then
+		local x0,y0,x1,y1 = unpack(path.data,offset,offset+3)
+    if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+      return util.sign(x1-x0)
+    else
+      return 0
+    end
+    -- if begin == true then
+		-- 	xclose, yclose = x0, y0
+		-- 	begin = false
+	  -- end
+		-- wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
+		-- cont = cont + 1
+		-- dat = dat + 2
 	end
-
-	return wind_num
+    --
+		-- if instruction == "cubic_segment" then
+		-- 	local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(path.data,dat,dat+7)
+		-- 	if begin == true then
+		-- 		xclose, yclose = x0, y0
+		-- 		begin = false
+		-- 	end
+		-- 	wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont,x0,y0,x1,y1,x2,y2,x3,y3)
+		-- 	cont = cont + 1
+		-- 	dat = dat + 6
+		-- end
+    --
+		-- if instruction == "quadratic_segment" then
+		-- 	local x0,y0,x1,y1,x2,y2 = unpack(path.data,dat,dat+5)
+		-- 	if begin == true then
+		-- 		xclose, yclose = x0, y0
+		-- 		begin = false
+		-- 	end
+		-- 	wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
+		-- 	cont = cont + 1
+		-- 	dat = dat + 4
+		-- end
+    --
+		-- if instruction == "rational_quadratic_segment" then
+		-- 	local x0,y0,x1,y1,w1,x2,y2 = unpack(path.data,dat,dat+6)
+		-- 	if begin == true then
+		-- 		xclose, yclose = x0, y0
+		-- 		begin = false
+		-- 	end
+		-- 	wind_num = wind_num + path.winding[cont](x,y,element.winding_rule,cont)
+		-- 	cont = cont + 1
+		-- 	dat = dat + 5
+		-- end
+	return 0
 end
+local function windshortcuts(accel,ind, i, x, y)
+local tree = accel.tree
+local shortcuts = tree[ind].shortcuts[i]
+-- for k,el in pairs(tree[ind].shortcuts) do print(k,el) end
+local wind_shorcut = 0
+for data = 1, #shortcuts, 4 do
+  local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
+  if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+    wind_shorcut = wind_shorcut + util.sign(y1-y0)
+  end
+end
+return wind_shorcut
+end
+
 
 function painting(accel,paint,x,y,r,g,b,a)
 	local rx, gx, bx, ax
@@ -1246,31 +1256,78 @@ end
 --  This is the other function you have to implement.
 --  It receives the acceleration datastructure and a sampling
 --  position. It returns the color at that position.
+-- local function sample(accel, x, y, path_num)
+--     local r,g,b,a = 0,0,0,0
+--     local rec = false
+--     local tree = accel.tree
+--  	if path_num ~= nil and path_num > 0 then rec = true end
+--  	for i = #accel.elements,1,-1 do
+-- 	 	if rec == false or (rec == true and i == path_num) then
+-- 	 		local element = accel.elements[i]
+-- 	    	local shape = accel.shapes[i]
+-- 	    	local paint = accel.paints[i]
+-- 	    	local pxmin, pymin, pxmax, pymax = unpack(shape.boundingBox, 1, 4)
+-- 	    	if insideBoundingBox(pxmin, pymin, pxmax, pymax, x, y) == true then
+-- 	    		local wind_num = wind(accel,i,x,y)
+-- 				if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
+-- 						r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
+-- 		        end
+--
+-- 		        if util.is_almost_one(a) then
+-- 		        	return r,g,b,a
+-- 		       	end
+-- 		    end
+-- 		end
+-- 	end
+-- 	return blend(1,1,1,1,r,g,b,a)
+-- end
 local function sample(accel, x, y, path_num)
-    local r,g,b,a = 0,0,0,0
-    local rec = false
- 	if path_num ~= nil and path_num > 0 then rec = true end
-  -- print(accel)
- 	for i = #accel.elements,1,-1 do
-	 	if rec == false or (rec == true and i == path_num) then
-	 		local element = accel.elements[i]
-	    	local shape = accel.shapes[i]
-	    	local paint = accel.paints[i]
-	    	local pxmin, pymin, pxmax, pymax = unpack(shape.boundingBox, 1, 4)
-	    	if insideBoundingBox(pxmin, pymin, pxmax, pymax, x, y) == true then
-	    		local wind_num = wind(accel,i,x,y)
-				if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
-						r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
-		        end
-
-		        if util.is_almost_one(a) then
-		        	return r,g,b,a
-		       	end
-		    end
-		end
-	end
-	return blend(1,1,1,1,r,g,b,a)
+local r,g,b,a = 0,0,0,0
+local rec = false
+local tree = accel.tree
+local ind = '0'
+tree[ind].leaf = false
+-- encontra uma folha
+-- print(ind, tree[ind].leaf)
+while tree[ind].leaf == false do
+  for i = 1, 4, 1 do
+    local n_ind = ind .. i
+    local bb = tree[n_ind].boundingBox
+    local xmin, ymin, xmax, ymax = unpack(bb)
+    if insideBoundingBox(xmin, ymin, xmax, ymax, x, y) then
+      ind = n_ind
+      break
+    end
+  end
 end
+-- dentro da folha itera nos shapes
+for i = #tree[ind].data, 1, -1 do
+  local j = #tree[ind].data[i]
+  if j ~= nil then
+    local element = accel.elements[i]
+    local shape = accel.shapes[i]
+    local paint = accel.paints[i]
+    local wind_num = tree[ind].winding[i]
+    -- print(wind_num)
+    for i_seg = 1, j do
+      wind_num = wind_num + wind(accel, i, i_seg, x, y)
+    end
+    if ind == '02' then print(wind_num)end
+    wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
+        -- if ind == '03' then print(wind_num)end
+    if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
+  		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
+  	end
+  	if util.is_almost_one(a) then
+  		return r,g,b,a
+  	end
+  end
+end
+
+return blend(1, 1, 1, 1, r, g, b, a)
+end
+
+
 
 function gamma_correction(sr,sg,sb,sa,n)
 	sr = 2*sr/n
@@ -1369,8 +1426,9 @@ end
 -- In theory, you don't have to change this function.
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
-function _M.render(tree, viewport, file, args)
--- for k, el in pairs(tree) do print(tree) end
+function _M.render(scene, viewport, file, args)
+for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
+  print(scene.tree['01'].winding[1])
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
@@ -1397,7 +1455,7 @@ function _M.render(tree, viewport, file, args)
         local y = vymin+i-1.+.5
         for j = 1, width do
             local x = vxmin+j-1.+.5
-            img:set_pixel(j, i, supersample(tree, pattern, x, y, p))
+            img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
         end
     end
 	stderr("\n")
