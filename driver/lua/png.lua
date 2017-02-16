@@ -504,7 +504,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     if bymin <= ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin) then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then
       return util.sign(y1 - y0)
       end
     end
@@ -548,8 +548,78 @@ end
 -- Função que diferencia scenes como branches ou leafs
 -- LEMBRAR DE USÁ-LA NO SAMPLE
 function isLeaf(tree, ind, maxdepth, maxseg)
-  if 1 < tree[ind].segments and tree[ind].segments > maxseg and tree[ind].depth < maxdepth then return false
+  if 1 < tree[ind].segments and tree[ind].depth < maxdepth then return false
   else return true end
+end
+
+function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
+  local epsilon = 0.005
+  local xmax = xmax - epsilon
+  if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
+    return true
+  else
+    local edge_number = 0
+    local point_number = 0
+    intersect = 0
+    intersect_p = 0
+
+    if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      vertical_linear_test(x0,y0,x1,y1,xmax,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      edge_number = edge_number + 1
+      intersect = 1
+    end
+    if vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      vertical_linear_test(x0,y0,x1,y1,xmin,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      edge_number = edge_number + 1
+      intersect = 2
+    end
+    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      edge_number = edge_number + 1
+      intersect = 3
+    end
+    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      edge_number = edge_number + 1
+      intersect = 4
+    end
+
+    if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then point_number = point_number + 1 intersect_p = 3 end
+    if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then point_number = point_number + 1 intersect_p = 2 end
+    if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then point_number = point_number + 1 intersect_p = 4 end
+    if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then point_number = point_number + 1 intersect_p = 1 end
+
+    if edge_number == 2 then
+      return true
+    elseif edge_number == 1 then
+      if (x0 == x1 and x1 == xmax and min(y0,y1) == ymin and max(y0,y1) == ymax and intersect == 1) then
+        return true
+      elseif (x0 == x1 and x1 == xmax and min(y0,y1)==ymin and max(y0,y1)==ymax and intersect == 2) or
+           (y0 == y1 and y1 == ymin and min(x0,x1)==xmin and max(x0,x1)==xmax and intersect == 3) or
+           (y0 == y1 and y1 == ymax and min(x0,x1)==xmin and max(x0,x1)==xmax and intersect == 4) then
+        return false
+      else
+        if point_number == 1 then
+          if (intersect == 1 and (intersect_p==1 or intersect_p==2)) or (intersect == 2 and (intersect_p==3 or intersect_p==4)) or
+             (intersect == 3 and (intersect_p==2 or intersect_p==3)) or (intersect == 4 and (intersect_p==1 or intersect_p==4)) then
+             return true
+          else
+            if intersect_p <= 2 then return true
+            else return false end
+          end
+        end 
+      end
+    else
+      if point_number == 1 then
+        if intersect_p <= 2 then return true
+        else return false end
+      elseif point_number == 2 then
+        return true
+      else
+        return false
+      end
+    end
+  end
 end
 
 function fillData(scene, tree, fatherInd, ind)
@@ -570,52 +640,56 @@ end
 
 function testSegment(tree, ind, shape, segment_num)
 
-	local xmin,ymin,xmax,ymax = unpack(tree[ind].boundingBox,1,4)
+  local xmin,ymin,xmax,ymax = unpack(tree[ind].boundingBox,1,4)
 
-		--Olha a scene original
-		local instruction = shape.instructions[segment_num]
+    --Olha a scene original
+    local instruction = shape.instructions[segment_num]
 
-		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
-			return false
-		end
+    if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
+      return false
+    end
 
-		if instruction == "end_open_contour" or instruction == "end_closed_contour" then
-			local offset = shape.offsets[segment_num]
-			local x0,y0,len = unpack(shape.data, offset, offset+2)
-			local offset_begin = shape.offsets[segment_num - len]
-			local xclose, yclose = unpack(shape.data, offset_begin+1, offset_begin+2)
-			local intersection = false
-			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose) == true then intersection = true
-			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose) end
-			return intersection
-		end
-
-		if instruction == "linear_segment" then
-			local offset = shape.offsets[segment_num]
-			local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
-			local intersection = false
-			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,x1,y1) == true then intersection = true
-			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1) end
-			return intersection
-		end
-
-		if instruction == "cubic_segment" then
-		end
-
-		if instruction == "quadratic_segment" then
+    if instruction == "end_open_contour" or instruction == "end_closed_contour" then
       local offset = shape.offsets[segment_num]
-			local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
-      local intersection = false
-      if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,x2,y2) == true then intersection = true
-      else intersection = intersects_quadratic_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1,x2,y2) end
-			return intersection
-		end
+      local x0,y0,len = unpack(shape.data, offset, offset+2)
+      local offset_begin = shape.offsets[segment_num - len]
+      local xclose, yclose = unpack(shape.data, offset_begin+1, offset_begin+2)
+      return insidetest_linear(x0,y0,xclose,yclose,xmin,ymin,xmax,ymax)
+    end
 
-		if instruction == "rational_quadratic_segment" then
+    if instruction == "linear_segment" then
+      local offset = shape.offsets[segment_num]
+      local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
+      return insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
+    end
 
-		end
+    if instruction == "cubic_segment" then
+      local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,dat,dat+7)
 
-	return hasSegment
+      dat = dat + 6
+    end
+
+    if instruction == "quadratic_segment" then
+      local x0,y0,x1,y1,x2,y2 = unpack(shape.data,dat,dat+5)
+      if begin == true then
+        xclose, yclose = x0, y0
+        begin = false
+      end
+
+      dat = dat + 4
+    end
+
+    if instruction == "rational_quadratic_segment" then
+      --local x0,y0,x1,y1,w1,x2,y2 = unpack(shape.data,dat,dat+6)
+      if begin == true then
+        xclose, yclose = x0, y0
+        begin = false
+      end
+
+      dat = dat + 5
+    end
+
+  return hasSegment
 end
 
 --[[
@@ -1021,21 +1095,17 @@ function _M.accelerate(scene, viewport)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
 
-    --[[
-   	for i=1,#tree["04"].data do
-   		io.write(i,": ")
-   		for j in ipairs(tree["04"].data[i]) do
-   			io.write(j," ")
-   		end
-   		io.write("\n")
-   	end
-<<<<<<< HEAD
+    
+    for i=1,#tree["02"].data do
+      io.write(i,": ")
+      for j in ipairs(tree["02"].data[i]) do
+        io.write(tree["02"].data[i][j], " ")
+      end
+      io.write("\n")
+    end
 
-	return new_scene
-=======
-    ]]--
-new_scene.tree = tree
-	return new_scene
+    new_scene.tree = tree
+	  return new_scene
 end
 
 ----------------------------------------------------
@@ -1550,8 +1620,8 @@ end
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
 
-for k,el in pairs(scene.tree['03'].data[1]) do print(k,el, scene.shapes[1].instructions[el]) end
-for k,el in pairs(scene.shapes[1].instructions) do print(k,el) end
+--for k,el in pairs(scene.tree['03'].data[1]) do print(k,el, scene.shapes[1].instructions[el]) end
+--for k,el in pairs(scene.shapes[1].instructions) do print(k,el) end
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
