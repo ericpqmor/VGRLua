@@ -886,7 +886,7 @@ function _M.accelerate(scene, viewport)
 				self.bound[#self.bound+1] = {vxmin, vymin, vxmax, vymax}
 				local a,b,c,d,e,f,g,h,i,sign = calculate_cubic_coefs(x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0)
 				self.coef[#self.coef+1] = {a,b,c,d,e,f,g,h,i,sign}
-				self.diagonal[#self.diagonal+1] = vertical_test_linear_segment(x0,y0,x3,y3,x2,y2)
+				self.diagonal[#self.diagonal+1] = horizontal_test_linear_segment(x0,y0,x3,y3,x2,y2)
 				--Update path bounding box
 				updatePathBoundingBox(x0,y0,x3,y3)
 
