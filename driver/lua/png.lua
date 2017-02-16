@@ -245,7 +245,7 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
         else
           test = vertical_implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
         end
-      end 
+      end
     end
   end
 
@@ -436,16 +436,17 @@ end
 --[[      SHORTCUTS          ]] --
 ----------------------------------------
 local function LinearIntersection(x0,y0,x1,y1, xmin, ymin, xmax, ymax)
-  if vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax+ 0.00005, ymin) == false then
-    return true
+  if vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymin) == false then
+    -- return true
   else
-    return false
+    -- return false
   end
+  return false
 end
 
 
 local function CreateShortcuts(scene,data, bb)
-  local xmin, ymin, xmax, ymax = bb[1], bb[2], bb[3], bb[4]
+  local xmin, ymin, xmax, ymax = unpack(bb)
   local shortcuts = {}
   -- for k,el in pairs(data[1]) do print(k,el) print(scene.shapes[1].instructions[el]) end
   for i = 1, #data do
@@ -457,7 +458,8 @@ local function CreateShortcuts(scene,data, bb)
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
           if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-            if (x1-x0) > 0 then
+
+            if util.sign(x1-x0) > 0 then
               x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
             else
               x0s, y0s, x1s, y1s = x0, ymax, x0, y0
@@ -496,22 +498,19 @@ local function WindingIncrement(tree, ind, shape, segment_num)
   local bb = tree[ind].boundingBox
   local offset = shape.offsets[segment_num]
   local instruction = shape.instructions[segment_num]
-  local xmin, ymin, xmax, ymax = bb[1], bb[2], bb[3], bb[4]
+  local bxmin, bymin, bxmax, bymax = bb[1], bb[2], bb[3], bb[4]
   if instruction == 'linear_segment' then
     local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
-    if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin) then
-      return (y1 - y0)
+    local ymax = math.max(y0,y1)
+    local ymin = math.min(y0,y1)
+    if bymin <= ymax and bymin >= ymin then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin) then
+      return util.sign(y1 - y0)
+      end
     end
   end
-
-
   return 0
 end
-
-
-
-
-
 -----------------------------------------
 --[[		SHORTCUT TREE 			 ]]--
 -----------------------------------------
@@ -561,11 +560,9 @@ function fillData(scene, tree, fatherInd, ind)
     tree[ind].winding[k] = 0
 		for segment_num in ipairs(tree[fatherInd].data[k]) do
 			if testSegment(tree, ind, shape, segment_num) == true then
-				--Adiciona no fim do vetor tree[ind].data[k] (Que é o vetor de paths)
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
-      -- print(tree[ind].winding[k])
       end
 		end
 	end
@@ -577,7 +574,6 @@ function testSegment(tree, ind, shape, segment_num)
 
 		--Olha a scene original
 		local instruction = shape.instructions[segment_num]
-		--print(instruction)
 
 		if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
 			return false
@@ -588,18 +584,9 @@ function testSegment(tree, ind, shape, segment_num)
 			local x0,y0,len = unpack(shape.data, offset, offset+2)
 			local offset_begin = shape.offsets[segment_num - len]
 			local xclose, yclose = unpack(shape.data, offset_begin+1, offset_begin+2)
-			--print(x0,y0,xclose,yclose)
 			local intersection = false
-			--Primeiro checa os endpoints
-			--print(xclose,yclose)
 			if insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0) == true or insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose) == true then intersection = true
 			else intersection = intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose) end
-			--io.write("Bounding box: ", xmin, " ", ymin, " ", xmax, " ", ymax, "\n")
-			--io.write("x0: ", x0, " y0: ", y0, " xclose: ", xclose, " yclose: ", yclose, "\n")
-			--print(insideBoundingBox(xmin,ymin,xmax,ymax,x0,y0))
-			--print(insideBoundingBox(xmin,ymin,xmax,ymax,xclose,yclose))
-			--print(intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,xclose,yclose))
-			--print("\n")
 			return intersection
 		end
 
@@ -1033,6 +1020,8 @@ function _M.accelerate(scene, viewport)
     subdivide(new_scene, tree, "0", 3, 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
+
+    --[[
    	for i=1,#tree["04"].data do
    		io.write(i,": ")
    		for j in ipairs(tree["04"].data[i]) do
@@ -1040,9 +1029,13 @@ function _M.accelerate(scene, viewport)
    		end
    		io.write("\n")
    	end
-    new_scene.tree = tree
+<<<<<<< HEAD
 
-    return new_scene
+	return new_scene
+=======
+    ]]--
+new_scene.tree = tree
+	return new_scene
 end
 
 ----------------------------------------------------
@@ -1275,20 +1268,32 @@ function wind(accel, i, i_seg, x, y)
 		local x0,y0,len = unpack(path.data,offset,offset+2)
     local offbegin = path.offsets[i_seg - len]
     local x1, y1 = unpack(path.data, offbegin+1, offbegin+2)
-    if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
-      return util.sign(x1-x0)
-    else
-      return 0
+    -- local xmax = math.max(x0,x1)
+    -- local xmin = math.min(x0,x1)
+    local ymax = math.max(y0,y1)
+    local ymin = math.min(y0,y1)
+    if y <= ymax and y >= ymin then
+      if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+        return util.sign(y1-y0)
+      else
+        return 0
+      end
     end
 		-- wind_num = wind_num + path.winding[cont](x,y,xclose,yclose,element.winding_rule,cont)
 		-- cont = cont + 1
 		-- dat = dat + 3
   elseif instruction == "linear_segment" then
 		local x0,y0,x1,y1 = unpack(path.data,offset,offset+3)
-    if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
-      return util.sign(x1-x0)
-    else
-      return 0
+    -- local xmax = math.max(x0,x1)
+    -- local xmin = math.min(x0,x1)
+    local ymax = math.max(y0,y1)
+    local ymin = math.min(y0,y1)
+    if y <= ymax and y >= ymin then
+      if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+        return util.sign(y1-y0)
+      else
+        return 0
+      end
     end
     -- if begin == true then
 		-- 	xclose, yclose = x0, y0
@@ -1340,8 +1345,14 @@ local shortcuts = tree[ind].shortcuts[i]
 local wind_shorcut = 0
 for data = 1, #shortcuts, 4 do
   local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
-  if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
-    wind_shorcut = wind_shorcut + util.sign(y1-y0)
+  -- local xmax = math.max(x0,x1)
+  -- local xmin = math.min(x0,x1)
+  local ymax = math.max(y0,y1)
+  local ymin = math.min(y0,y1)
+  if y <= ymax and y >= ymin then
+    if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+      wind_shorcut = wind_shorcut + util.sign(y1-y0)
+    end
   end
 end
 return wind_shorcut
@@ -1418,9 +1429,14 @@ for i = #tree[ind].data, 1, -1 do
     for i_seg = 1, j do
       wind_num = wind_num + wind(accel, i, i_seg, x, y)
     end
-    if ind == '02' then print(wind_num)end
+    if ind == '03' then
+-- print(wind_num)
+    -- wind_num = wind_num +1
+end
+-- print(wind_num)
+    -- if ind == '02' then print(wind_num)end
     wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
-        -- if ind == '03' then print(wind_num)end
+    -- print(wind_num)
     if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
   		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
   	end
@@ -1533,6 +1549,9 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
+
+for k,el in pairs(scene.tree['03'].data[1]) do print(k,el, scene.shapes[1].instructions[el]) end
+for k,el in pairs(scene.shapes[1].instructions) do print(k,el) end
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
@@ -1551,6 +1570,7 @@ function _M.render(scene, viewport, file, args)
     -- Get image width and height from viewport
     local width, height = vxmax-vxmin, vymax-vymin
     -- Allocate output image
+
     local img = image.image(width, height, 4)
 	local time = chronos.chronos()
     -- Rendering loop
@@ -1562,6 +1582,19 @@ function _M.render(scene, viewport, file, args)
             img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
         end
     end
+
+          local img = image.image(width, height, 4)
+      	local time = chronos.chronos()
+          -- Rendering loop
+          for i = 1, height do
+      	stderr("\r%5g%%", floor(1000*i/height)/10)
+              local y = vymin+i-1.+.5
+              for j = 1, width do
+                  local x = vxmin+j-1.+.5
+                  img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
+              end
+          end
+
 	stderr("\n")
 	stderr("rendering in %.3fs\n", time:elapsed())
 	time:reset()
