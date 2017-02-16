@@ -631,6 +631,8 @@ function fillData(scene, tree, fatherInd, ind)
 		for segment_num in ipairs(tree[fatherInd].data[k]) do
 			if testSegment(tree, ind, shape, segment_num) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
+        tree[ind].segments = tree[ind].segments + 1
+        --print(tree[ind].segments)
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
       end
@@ -1091,15 +1093,13 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene, tree, "0", 3, 100)
+    subdivide(new_scene, tree, "0", 1, 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-
-    
-    for i=1,#tree["02"].data do
+    for i=1,#tree["04"].data do
       io.write(i,": ")
-      for j in ipairs(tree["02"].data[i]) do
-        io.write(tree["02"].data[i][j], " ")
+      for j in ipairs(tree["04"].data[i]) do
+        io.write(tree["04"].data[i][j], " ")
       end
       io.write("\n")
     end
@@ -1342,8 +1342,10 @@ function wind(accel, i, i_seg, x, y)
     -- local xmin = math.min(x0,x1)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
+    local xmin = math.min(x0,x1)
+    local xmax = math.max(x0,x1)
     if y <= ymax and y >= ymin then
-      if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+      if horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) then
         return util.sign(y1-y0)
       else
         return 0
@@ -1419,8 +1421,10 @@ for data = 1, #shortcuts, 4 do
   -- local xmin = math.min(x0,x1)
   local ymax = math.max(y0,y1)
   local ymin = math.min(y0,y1)
+  local xmin = math.min(x0,x1)
+  local xmax = math.max(x0,x1)
   if y <= ymax and y >= ymin then
-    if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
+    if horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) then
       wind_shorcut = wind_shorcut + util.sign(y1-y0)
     end
   end
@@ -1470,6 +1474,8 @@ end
 -- end
 local function sample(accel, x, y, path_num)
 local r,g,b,a = 0,0,0,0
+local rept = false
+if x == 115.5 and y == 35.5 then rept = true end
 local rec = false
 local tree = accel.tree
 local ind = '0'
@@ -1495,9 +1501,10 @@ for i = #tree[ind].data, 1, -1 do
     local shape = accel.shapes[i]
     local paint = accel.paints[i]
     local wind_num = tree[ind].winding[i]
-    -- print(wind_num)
     for i_seg = 1, j do
-      wind_num = wind_num + wind(accel, i, i_seg, x, y)
+
+      wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
+      if rept == true then print(wind_num) end
     end
     if ind == '03' then
 -- print(wind_num)
@@ -1619,58 +1626,41 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
-
---for k,el in pairs(scene.tree['03'].data[1]) do print(k,el, scene.shapes[1].instructions[el]) end
---for k,el in pairs(scene.shapes[1].instructions) do print(k,el) end
+  --print("Here at render")
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
     -- Get viewport
-
     local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
     if tx ~= nil then
-    	vxmin = vxmin - tx
-    	vxmax = vxmax - tx
+      vxmin = vxmin - tx
+      vxmax = vxmax - tx
     end
     if ty ~= nil then
-    	vymin = vymin - ty
-    	vymax = vymax - ty
+      vymin = vymin - ty
+      vymax = vymax - ty
     end
     -- Get image width and height from viewport
     local width, height = vxmax-vxmin, vymax-vymin
     -- Allocate output image
-
     local img = image.image(width, height, 4)
-	local time = chronos.chronos()
+  local time = chronos.chronos()
     -- Rendering loop
     for i = 1, height do
-	stderr("\r%5g%%", floor(1000*i/height)/10)
+    stderr("\r%5g%%", floor(1000*i/height)/10)
         local y = vymin+i-1.+.5
         for j = 1, width do
             local x = vxmin+j-1.+.5
             img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
         end
     end
-
-          local img = image.image(width, height, 4)
-      	local time = chronos.chronos()
-          -- Rendering loop
-          for i = 1, height do
-      	stderr("\r%5g%%", floor(1000*i/height)/10)
-              local y = vymin+i-1.+.5
-              for j = 1, width do
-                  local x = vxmin+j-1.+.5
-                  img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
-              end
-          end
-
-	stderr("\n")
-	stderr("rendering in %.3fs\n", time:elapsed())
-	time:reset()
-	    -- store output image
-	    image.png.store8(file, img)
-	stderr("saved in %.3fs\n", time:elapsed())
+  stderr("\n")
+  stderr("rendering in %.3fs\n", time:elapsed())
+  time:reset()
+      -- store output image
+      image.png.store8(file, img)
+  stderr("saved in %.3fs\n", time:elapsed())
 end
 
 return _M
