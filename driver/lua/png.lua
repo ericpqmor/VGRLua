@@ -90,7 +90,6 @@ function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
     return true
   elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-    --print(x0,y0,x1,y1,xmin,ymin,xmax,ymax, "flaag")
     return true
   elseif horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
@@ -234,7 +233,6 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
       if diagonal == true then
         if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
           test = vertical_implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
-          --print(test)
         else
           test = false
         end
@@ -437,9 +435,9 @@ end
 ----------------------------------------
 local function LinearIntersection(x0,y0,x1,y1, xmin, ymin, xmax, ymax)
   if vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymin) == false then
-    -- return true
+    return true
   else
-    -- return false
+    return false
   end
   return false
 end
@@ -457,32 +455,35 @@ local function CreateShortcuts(scene,data, bb)
         local offset = scene.shapes[i].offsets[instruction]
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
-          if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-
-            if util.sign(x1-x0) > 0 then
-              x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
-            else
-              x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+          if x0 > xmax or x1 > xmax then
+            if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+              if util.sign(x1-x0) > 0 then
+                x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+              else
+                x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+              end
+              table.insert(shortcuts[i],x0s)
+              table.insert(shortcuts[i], y0s)
+              table.insert(shortcuts[i], x1s)
+              table.insert(shortcuts[i], y1s)
             end
-            table.insert(shortcuts[i],x0s)
-            table.insert(shortcuts[i], y0s)
-            table.insert(shortcuts[i], x1s)
-            table.insert(shortcuts[i], y1s)
           end
         elseif scene.shapes[i].instructions[instruction] == 'end_open_contour' or scene.shapes[i].instructions[instruction] == 'end_closed_contour' then
           local x0, y0, len = unpack(scene.shapes[i].data, offset, offset+2)
           local begin_off = scene.shapes[i].offsets[instruction-len]
           local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
-          if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-            if (x1-x0) > 0 then
-              x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
-            else
-              x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+          if x0 > xmax or x1 > xmax then
+            if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+              if (x1-x0) > 0 then
+                x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+              else
+                x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+              end
+              table.insert(shortcuts[i],x0s)
+              table.insert(shortcuts[i], y0s)
+              table.insert(shortcuts[i], x1s)
+              table.insert(shortcuts[i], y1s)
             end
-            table.insert(shortcuts[i],x0s)
-            table.insert(shortcuts[i], y0s)
-            table.insert(shortcuts[i], x1s)
-            table.insert(shortcuts[i], y1s)
           end
         end
       end
@@ -607,7 +608,7 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
             if intersect_p <= 2 then return true
             else return false end
           end
-        end 
+        end
       end
     else
       if point_number == 1 then
@@ -632,7 +633,6 @@ function fillData(scene, tree, fatherInd, ind)
 			if testSegment(tree, ind, shape, segment_num) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
         tree[ind].segments = tree[ind].segments + 1
-        --print(tree[ind].segments)
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
       end
@@ -1191,7 +1191,6 @@ function findColor(t, ramp, paint)
 
 	local stops = ramp.stops
 	local px, pk, i1, i2 = LocalizeStop(p, stops)
-	--print(px,pk,med)
 	local rx, gx, bx, ax = unpack(stops[i1][2], 1, 4)
 	local rk, gk, bk, ak = unpack(stops[i2][2], 1, 4)
 	local r, g, b, a
@@ -1254,7 +1253,6 @@ function radial_gradient_mapping(paint, px, py)
 	px,py = M:apply(px,py)
 	fx,fy = M:apply(fx,fy)
 
-	--print(px,py,fx,fy)
 
 	if fx*fx + fy*fy > r*r then fx,fy = focus_transform(fx,fy,r) end
 
@@ -1300,14 +1298,12 @@ function texture(accel, x, y, paint)
 	x,y = G:apply(x,y)
 	 local img = paint.image
 	local width, height = img.width, img.height
-	--print(width,height)
 	local tx = LinearMapping(x,0,0,0,width,0)
 	local ty = LinearMapping(0,y,0,0,0,height)
 	tx = wrap_function(tx*width,spread)
 	ty = wrap_function(ty*height,spread)
     tx = math.ceil(tx*width)
     ty = math.ceil(ty*height)
-   -- print(tx,ty)
 	local r,g,b,a = img:get_pixel(tx, ty)
 	if a == nil then a = 1 end
 	return r,g,b,a
@@ -1413,7 +1409,6 @@ end
 local function windshortcuts(accel,ind, i, x, y)
 local tree = accel.tree
 local shortcuts = tree[ind].shortcuts[i]
--- for k,el in pairs(tree[ind].shortcuts) do print(k,el) end
 local wind_shorcut = 0
 for data = 1, #shortcuts, 4 do
   local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
@@ -1481,7 +1476,6 @@ local tree = accel.tree
 local ind = '0'
 tree[ind].leaf = false
 -- encontra uma folha
--- print(ind, tree[ind].leaf)
 while tree[ind].leaf == false do
   for i = 1, 4, 1 do
     local n_ind = ind .. i
@@ -1504,16 +1498,8 @@ for i = #tree[ind].data, 1, -1 do
     for i_seg = 1, j do
 
       wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
-      if rept == true then print(wind_num) end
     end
-    if ind == '03' then
--- print(wind_num)
-    -- wind_num = wind_num +1
-end
--- print(wind_num)
-    -- if ind == '02' then print(wind_num)end
     wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
-    -- print(wind_num)
     if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
   		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
   	end
@@ -1626,7 +1612,7 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
-  --print("Here at render")
+   for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
