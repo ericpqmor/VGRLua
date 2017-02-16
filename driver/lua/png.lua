@@ -82,14 +82,11 @@ function vertical_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax)
 end
 
 function intersects_linear_segment(xmin,ymin,xmax,ymax,x0,y0,x1,y1)
-  --io.write("Going here is: ", x0, " ", y0, " ", x1, " ", y1, "\n")
-  --io.write("Bounding box: ", xmin, " ", ymin, " ", xmax, " ", ymax, "\n")
   if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	vertical_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
     return true
   elseif vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	vertical_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-  	--print(x0,y0,x1,y1, "flaaaaaaaaaaag")
     return true
   elseif horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
   	horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
@@ -492,6 +489,28 @@ local function CreateShortcuts(scene,data, bb)
 
     return shortcuts --- tabela formato {shape1{shortcuts},shape2{}}
 end
+-----------------------------------------
+--[[   WINDING INCREMENTS    ]]--
+-----------------------------------------
+local function WindingIncrement(tree, ind, shape, segment_num)
+  local bb = tree[ind].boundingBox
+  local offset = shape.offsets[segment_num]
+  local instruction = shape.instructions[segment_num]
+  local xmin, ymin, xmax, ymax = bb[1], bb[2], bb[3], bb[4]
+  if instruction == 'linear_segment' then
+    local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
+    if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin) then
+      return (y1 - y0)
+    end
+  end
+
+
+  return 0
+end
+
+
+
+
 
 -----------------------------------------
 --[[		SHORTCUT TREE 			 ]]--
@@ -538,11 +557,15 @@ function fillData(scene, tree, fatherInd, ind)
 	for k in ipairs(tree[fatherInd].data) do
 		local shape = scene.shapes[k]
 		tree[ind].data[k] = {}
+    tree[ind].winding[k] = 0
 		for segment_num in ipairs(tree[fatherInd].data[k]) do
 			if testSegment(tree, ind, shape, segment_num) == true then
 				--Adiciona no fim do vetor tree[ind].data[k] (Que é o vetor de paths)
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
-			end
+      else
+        tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
+      --   print(tree[ind].winding[k])
+      end
 		end
 	end
 end
@@ -1020,7 +1043,7 @@ function _M.accelerate(scene, viewport)
    	end
     ]]--
 
-	return new_scene
+	return new_scene, tree
 end
 
 ----------------------------------------------------
@@ -1335,6 +1358,7 @@ local function sample(accel, x, y, path_num)
     local r,g,b,a = 0,0,0,0
     local rec = false
  	if path_num ~= nil and path_num > 0 then rec = true end
+  -- print(accel)
  	for i = #accel.elements,1,-1 do
 	 	if rec == false or (rec == true and i == path_num) then
 	 		local element = accel.elements[i]
@@ -1459,6 +1483,7 @@ function _M.render(scene, viewport, file, args)
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
     -- Get viewport
+
     local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
     if tx ~= nil then
     	vxmin = vxmin - tx

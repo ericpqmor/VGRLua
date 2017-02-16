@@ -3,9 +3,9 @@ local scenelib = require "scene"
 local path = require "path"
 local png = require "png"
 
----- AQUI CRIA O SEGMENTO LINEAR NA CENA NOVA
+---- AQUI CRIA O SEGMENTO LINEAR (SHORTCUT SEGMENT!!!) NA CENA NOVA
 local function NLinearSegment(x0,y0, x1, y1, shape, bb, offsetit)
-  --- Aqui entra se o segmento intersecta a lateral direita
+  --- Aqui entra se o linear_segment intersecta a lateral direita
   if x0 >= bb.xmax or x1 >= bb.xmax then
     local sentido = (x1-x0)
     if sentido < 0 then
@@ -30,9 +30,7 @@ local function NLinearSegment(x0,y0, x1, y1, shape, bb, offsetit)
       offsetit = offsetit + 4 -- move o contador do offset
     end
     -- se o segmento intersecta a lateral esquerda
-  elseif x0 < bb.xmin or x1 < bb.xmin then
-    table.insert(shape.instructions, 'linear_segment') -- cria a instruc
-    table.insert(shape.offsets, offsetit) -- define seu offset
+  elseif x0 < bb.xmin or x1 < bb.xmin then -- define seu offset
     table.insert(shape.data, x0)
     table.insert(shape.data, y0)
     table.insert(shape.data, x1)
@@ -102,7 +100,7 @@ local function NQuadraticSegment(x0,y0, x1, y1,x2,y2, shape, bb, offsetit)
 end
 
 
----- AQUI CRIA O SEGMENTO RACIONAL QUADRATICO DA NOVA cena
+---- AQUI CRIA O SEGMENTO RACIONAL QUADRATICO DA NOVA CENA
 local function NRatQuadraticSegment(x0,y0, x1, y1, w,x2,y2, shape, bb, offsetit)
   --- Aqui entra se o segmento intersecta a lateral direita
   if x0 >= bb.xmax or x2 >= bb.xmax then
