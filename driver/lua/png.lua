@@ -337,7 +337,7 @@ function horizontal_cubic_test(x0,y0,x1,y1,x2,y2,x3,y3,x,y,coefs,xmin,ymin,xmax,
 	end
 
 	if ymin <= y and y < ymax and x <= xmax then
-		if x <= xmin then test = true
+		if x < xmin then test = true
 		else
 		--Inside the bounding box. Diagonal test
 			if diagonal == true then
@@ -508,7 +508,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     if bymin < ymax and bymin > ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin+0.05) then return util.sign(y1-y0) end
     end
   end
 
@@ -567,34 +567,36 @@ function isLeaf(tree, ind, maxdepth, maxseg)
 end
 
 function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
-  local epsilon = 0.005
-  local xmax = xmax +epsilon
-  if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
+  local xm,ym = (x0+x1)/2,(y0+y1)/2
+  if (xmin<x0 and x0<=xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or 
+    (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
     return true
   else
-    if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-       vertical_linear_test(x0,y0,x1,y1,xmax,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+    --print("Rect: ", x0,y0,x1,y1)
+    if vertical_linear_test(x0,y0,x1,y1,xmax,ymax-0.05,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+       vertical_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+           print("Rect: ", x0,y0,x1,y1)
           return true
     end
     if vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      vertical_linear_test(x0,y0,x1,y1,xmin,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      vertical_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
           return true
     end
     if horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
           return true
     end
     if horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+      horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
           return true
     end
-
-      if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
-      if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then return true end
-      if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then return true end
-      if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end
   end
-  --[[
+
+    if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
+     -- if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then return true end
+     -- if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then return true end
+   -- if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end
+   --[[
   local epsilon = 0.005
   local xmax = xmax - epsilon
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
@@ -665,6 +667,10 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   ]]--
 end
 
+function insidetest_quadratic(x0,y0,x1,y1,x2,y2,xmin,ymin,xmax,ymax)
+
+end
+
 function fillData(scene, tree, fatherInd, ind)
 
   for k in ipairs(tree[fatherInd].data) do
@@ -708,29 +714,21 @@ function testSegment(tree, ind, shape, segment_num)
     end
 
     if instruction == "cubic_segment" then
-      local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,dat,dat+7)
-
-      dat = dat + 6
+      local offset = shape.offsets[segment_num]
+      local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,offset,offset+7)
+      return insidetest_cubic
     end
 
     if instruction == "quadratic_segment" then
-      local x0,y0,x1,y1,x2,y2 = unpack(shape.data,dat,dat+5)
-      if begin == true then
-        xclose, yclose = x0, y0
-        begin = false
-      end
-
-      dat = dat + 4
+      local offset = shape.offsets[segment_num]
+      local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
+      return insidetest_quadratic(x0,y0,x1,y1,x2,y2,xmin,ymin,xmax,ymax)
     end
 
     if instruction == "rational_quadratic_segment" then
-      --local x0,y0,x1,y1,w1,x2,y2 = unpack(shape.data,dat,dat+6)
-      if begin == true then
-        xclose, yclose = x0, y0
-        begin = false
-      end
-
-      dat = dat + 5
+      local offset = shape.offsets[segment_num]
+      local x0,y0,x1,y1,w1,x2,y2 = unpack(shape.data,offset,offset+6)
+      return insidetest_rationalquadratic(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
     end
 
   return hasSegment
@@ -773,6 +771,7 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
     tree[ind].data = {}
     tree[ind].winding = {}
     tree[ind].shortcuts = {}
+    print(ind)
 
     --Criação de bounding boxes
     local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
@@ -1137,10 +1136,10 @@ function _M.accelerate(scene, viewport)
     subdivide(new_scene, tree, "0", 1 , 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-    for i=1,#tree["02"].data do
+    for i=1,#tree["03"].data do
       io.write(i,": ")
-      for j in ipairs(tree["02"].data[i]) do
-        io.write(tree["02"].data[i][j], " ")
+      for j in ipairs(tree["03"].data[i]) do
+        io.write(tree["03"].data[i][j], " ")
       end
       io.write("\n")
     end
