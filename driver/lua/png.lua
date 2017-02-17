@@ -1137,10 +1137,10 @@ function _M.accelerate(scene, viewport)
     subdivide(new_scene, tree, "0", 1 , 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-    for i=1,#tree["03"].data do
+    for i=1,#tree["02"].data do
       io.write(i,": ")
-      for j in ipairs(tree["03"].data[i]) do
-        io.write(tree["03"].data[i][j], " ")
+      for j in ipairs(tree["02"].data[i]) do
+        io.write(tree["02"].data[i][j], " ")
       end
       io.write("\n")
     end
@@ -1536,22 +1536,24 @@ while tree[ind].leaf == false do
 end
 -- dentro da folha itera nos shapes
 for i = #tree[ind].data, 1, -1 do
-  local j = #tree[ind].data[i]
-  if j ~= nil then
-    local element = accel.elements[i]
-    local shape = accel.shapes[i]
-    local paint = accel.paints[i]
-    local wind_num = tree[ind].winding[i]
-    for i_seg = 1, j do
-      wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
+  if path_num == nil or (path_num > 0 and i == path_num) then
+    local j = #tree[ind].data[i]
+    if j ~= nil then
+      local element = accel.elements[i]
+      local shape = accel.shapes[i]
+      local paint = accel.paints[i]
+      local wind_num = tree[ind].winding[i]
+      for i_seg = 1, j do
+        wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
+      end
+      wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
+      if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
+    		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
+    	end
+    	if util.is_almost_one(a) then
+    		return r,g,b,a
+    	end
     end
-    wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
-    if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
-  		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
-  	end
-  	if util.is_almost_one(a) then
-  		return r,g,b,a
-  	end
   end
 end
 
