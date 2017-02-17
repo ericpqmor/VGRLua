@@ -568,7 +568,7 @@ end
 
 function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   local epsilon = 0.005
-  local xmax = xmax - epsilon
+  local xmax = xmax +epsilon
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
     return true
   else
@@ -592,7 +592,7 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
       if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
       if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then return true end
       if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then return true end
-      if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end 
+      if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end
   end
   --[[
   local epsilon = 0.005
@@ -1664,7 +1664,7 @@ function _M.render(scene, viewport, file, args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
-    -- Get viewport 
+    -- Get viewport
       local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
       if tx ~= nil then
         vxmin = vxmin - tx
