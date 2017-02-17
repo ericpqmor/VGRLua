@@ -137,7 +137,6 @@ if #rejected > 0 then
 end
 
 -- by default, dump to stadard out
-local output = io.stdout
 -- if another argument was given, replace with the open file
 --outputname = outputname .. rejected[p]
 
@@ -185,11 +184,12 @@ for i=pngstart,pngend do
     if i == pngstart then outputname = outputname:sub(1,string.len(outputname)-4) .. i .. outputname:sub(string.len(outputname)-3,string.len(outputname))
     else outputname = outputname:sub(1,string.len(outputname)-5) .. i .. outputname:sub(string.len(outputname)-3,string.len(outputname)) end
 
+    local output = io.stdout
     if outputname then
         output = assert(io.open(outputname, "wb"))
     end
 
-    rejected[1] = rejected[1]:sub(1,3) .. tostring(i)
+    if rejected[1] ~= nil then rejected[1] = rejected[1]:sub(1,3) .. tostring(i) end
     stderr("accelerate in %gs\n", time:elapsed())
     -- invoke driver-defined render() on result of accelerate()
     -- pass rejected options as last argument
