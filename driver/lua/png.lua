@@ -525,6 +525,23 @@ local function WindingIncrement(tree, ind, shape, segment_num)
 
   return 0
 end
+
+local function WindingShortcuts(tree,ind,fatherind,  shape)
+  local winding = 0
+  local shortcuts = tree[fatherind].shortcuts[shape]
+  local xmin, ymin, xmax, ymax = unpack(tree[ind].boundingBox)
+  if shortcuts ~= nil then
+    for k =1, n, 4 do
+      local x0,y0,x1,y1 = unpack(shortcuts, k, k+3)
+      if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin + 0.05) then
+        winding = winding + util.sign(y1-y0)
+      end
+    end
+  end
+
+  return winding
+end
+
 -----------------------------------------
 --[[		SHORTCUT TREE 			 ]]--
 -----------------------------------------
@@ -674,9 +691,9 @@ end
 function fillData(scene, tree, fatherInd, ind)
 
   for k in ipairs(tree[fatherInd].data) do
-		local shape = scene.shapes[k]
+	local shape = scene.shapes[k]
 		tree[ind].data[k] = {}
-    tree[ind].winding[k] = 0
+    		tree[ind].winding[k] = 0
 		for segment_num in ipairs(tree[fatherInd].data[k]) do
 			if testSegment(tree, ind, shape, segment_num) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
@@ -684,8 +701,9 @@ function fillData(scene, tree, fatherInd, ind)
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
       end
-		end
-	end
+    end
+	tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
+  end
 end
 
 function testSegment(tree, ind, shape, segment_num)
