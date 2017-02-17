@@ -1517,7 +1517,6 @@ end
 local function sample(accel, x, y, path_num)
 local r,g,b,a = 0,0,0,0
 local rept = false
-if x == 35.5 and y == 65.5 then return 255,0,0,1 end
 local rec = false
 local tree = accel.tree
 local ind = '0'
@@ -1665,36 +1664,37 @@ function _M.render(scene, viewport, file, args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
-    -- Get viewport
-    local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
-    if tx ~= nil then
-      vxmin = vxmin - tx
-      vxmax = vxmax - tx
-    end
-    if ty ~= nil then
-      vymin = vymin - ty
-      vymax = vymax - ty
-    end
-    -- Get image width and height from viewport
+    -- Get viewport 
+      local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
+      if tx ~= nil then
+        vxmin = vxmin - tx
+        vxmax = vxmax - tx
+      end
+      if ty ~= nil then
+        vymin = vymin - ty
+        vymax = vymax - ty
+      end
+      -- Get image width and height from viewport
     local width, height = vxmax-vxmin, vymax-vymin
-    -- Allocate output image
+      -- Allocate output image
     local img = image.image(width, height, 4)
-  local time = chronos.chronos()
-    -- Rendering loop
-    for i = 1, height do
-    stderr("\r%5g%%", floor(1000*i/height)/10)
-        local y = vymin+i-1.+.5
-        for j = 1, width do
-            local x = vxmin+j-1.+.5
-            img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
-        end
+    local time = chronos.chronos()
+      -- Rendering loop
+      for i = 1, height do
+      stderr("\r%5g%%", floor(1000*i/height)/10)
+          local y = vymin+i-1.+.5
+          for j = 1, width do
+              local x = vxmin+j-1.+.5
+              img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
+          end
+      end
+    stderr("\n")
+    stderr("rendering in %.3fs\n", time:elapsed())
+    time:reset()
+        -- store output image
+        image.png.store8(file, img)
+    stderr("saved in %.3fs\n", time:elapsed())
     end
-  stderr("\n")
-  stderr("rendering in %.3fs\n", time:elapsed())
-  time:reset()
-      -- store output image
-      image.png.store8(file, img)
-  stderr("saved in %.3fs\n", time:elapsed())
-end
+  --end
 
 return _M
