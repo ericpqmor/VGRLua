@@ -446,8 +446,11 @@ end
 local function CreateShortcuts(scene,data, bb)
   local xmin, ymin, xmax, ymax = unpack(bb)
   local shortcuts = {}
+  local rec = false
+  if xmin == 0 and xmax == 100 and ymin == 0 and ymax == 100 then rec = true end
   -- for k,el in pairs(data[1]) do print(k,el) print(scene.shapes[1].instructions[el]) end
-  for i = 1, #data do
+  for i in ipairs(data) do
+    if rec == true then print(i) end
     shortcuts[i] = {}
     if data[i] ~= nil then
       for j = 1, #data[i] do
@@ -504,12 +507,22 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
-    if bymin <= ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then
-      return util.sign(y1 - y0)
-      end
+    if bymin < ymax and bymin > ymin then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
     end
   end
+
+  if instruction == 'end_open_contour' or instruction == 'end_closed_contour' then
+    local x0,y0,len = unpack(shape.data, offset, offset+2)
+    local offset_begin = shape.offsets[segment_num - len]
+    local x1,y1 = unpack(shape.data, offset_begin+1, offset_begin+2)
+    local ymax = math.max(y0,y1)
+    local ymin = math.min(y0,y1)
+    if bymin <= ymax and bymin >= ymin then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
+    end
+  end
+
   return 0
 end
 -----------------------------------------
@@ -554,6 +567,34 @@ function isLeaf(tree, ind, maxdepth, maxseg)
 end
 
 function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
+  local epsilon = 0.005
+  local xmax = xmax - epsilon
+  if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
+    return true
+  else
+    if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+       vertical_linear_test(x0,y0,x1,y1,xmax,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+          return true
+    end
+    if vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      vertical_linear_test(x0,y0,x1,y1,xmin,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+          return true
+    end
+    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+          return true
+    end
+    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
+      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+          return true
+    end
+
+      if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
+      if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then return true end
+      if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then return true end
+      if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end 
+  end
+  --[[
   local epsilon = 0.005
   local xmax = xmax - epsilon
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
@@ -621,6 +662,7 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
       end
     end
   end
+  ]]--
 end
 
 function fillData(scene, tree, fatherInd, ind)
@@ -725,7 +767,6 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
 
   for i=1,4 do
   	local ind = fatherInd .. i
-    print(ind)
 
     --Inicializa as tables. As duas últimas serão vazias para todos os ind.
     tree[ind] = {}
@@ -1093,13 +1134,13 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene, tree, "0", 1, 100)
+    subdivide(new_scene, tree, "0", 1 , 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-    for i=1,#tree["04"].data do
+    for i=1,#tree["03"].data do
       io.write(i,": ")
-      for j in ipairs(tree["04"].data[i]) do
-        io.write(tree["04"].data[i][j], " ")
+      for j in ipairs(tree["03"].data[i]) do
+        io.write(tree["03"].data[i][j], " ")
       end
       io.write("\n")
     end
@@ -1334,34 +1375,38 @@ function wind(accel, i, i_seg, x, y)
 		local x0,y0,len = unpack(path.data,offset,offset+2)
     local offbegin = path.offsets[i_seg - len]
     local x1, y1 = unpack(path.data, offbegin+1, offbegin+2)
+    --print(x0,y0,x1,y1)
     -- local xmax = math.max(x0,x1)
     -- local xmin = math.min(x0,x1)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     local xmin = math.min(x0,x1)
     local xmax = math.max(x0,x1)
-    if y <= ymax and y >= ymin then
+    --print(ymin,ymax)
+    if x == 35.5 and y == 65.5 then print("Hi") end
       if horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) then
         return util.sign(y1-y0)
       else
+        if x==35.5 and y==65.5 then print(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) end
         return 0
       end
-    end
 		-- wind_num = wind_num + path.winding[cont](x,y,xclose,yclose,element.winding_rule,cont)
 		-- cont = cont + 1
 		-- dat = dat + 3
   elseif instruction == "linear_segment" then
 		local x0,y0,x1,y1 = unpack(path.data,offset,offset+3)
+    if x == 35.5 and y == 65.5 then print(x0,y0,x1,y1) end
     -- local xmax = math.max(x0,x1)
     -- local xmin = math.min(x0,x1)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
-    if y <= ymax and y >= ymin then
-      if horizontal_test_linear_segment(x0, y0, x1,y1, x, y) then
-        return util.sign(y1-y0)
-      else
-        return 0
-      end
+    local xmax = math.max(x0,x1)
+    local xmin = math.min(x0,x1)
+    if horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) == true then
+      if x == 35.5 and y == 65.5 then print(util.sign(y1-y0)) end
+      return util.sign(y1-y0)
+    else
+      return 0
     end
     -- if begin == true then
 		-- 	xclose, yclose = x0, y0
@@ -1408,10 +1453,12 @@ function wind(accel, i, i_seg, x, y)
 end
 local function windshortcuts(accel,ind, i, x, y)
 local tree = accel.tree
+if x == 35.5 and y == 65.5 then print(ind) end
 local shortcuts = tree[ind].shortcuts[i]
 local wind_shorcut = 0
 for data = 1, #shortcuts, 4 do
   local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
+  -- print(x0,y0,x1,y1)
   -- local xmax = math.max(x0,x1)
   -- local xmin = math.min(x0,x1)
   local ymax = math.max(y0,y1)
@@ -1470,7 +1517,7 @@ end
 local function sample(accel, x, y, path_num)
 local r,g,b,a = 0,0,0,0
 local rept = false
-if x == 115.5 and y == 35.5 then rept = true end
+if x == 35.5 and y == 65.5 then return 255,0,0,1 end
 local rec = false
 local tree = accel.tree
 local ind = '0'
@@ -1496,7 +1543,6 @@ for i = #tree[ind].data, 1, -1 do
     local paint = accel.paints[i]
     local wind_num = tree[ind].winding[i]
     for i_seg = 1, j do
-
       wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
     end
     wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
@@ -1612,7 +1658,7 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
-   for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
+   --for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
