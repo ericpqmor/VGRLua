@@ -456,15 +456,17 @@ local function CreateShortcuts(scene,data, bb)
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
           if x0 > xmax or x1 > xmax then
             if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-              if util.sign(x1-x0) > 0 then
-                x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
-              else
-                x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+              if horizontal_test_linear_segment(x0,y0,x1,y1,xmax,ymin ) == false then
+                if util.sign(x1-x0) > 0 then
+                  x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+                else
+                  x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+                end
+                table.insert(shortcuts[i],x0s)
+                table.insert(shortcuts[i], y0s)
+                table.insert(shortcuts[i], x1s)
+                table.insert(shortcuts[i], y1s)
               end
-              table.insert(shortcuts[i],x0s)
-              table.insert(shortcuts[i], y0s)
-              table.insert(shortcuts[i], x1s)
-              table.insert(shortcuts[i], y1s)
             end
           end
         elseif scene.shapes[i].instructions[instruction] == 'end_open_contour' or scene.shapes[i].instructions[instruction] == 'end_closed_contour' then
@@ -473,15 +475,17 @@ local function CreateShortcuts(scene,data, bb)
           local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
           if x0 > xmax or x1 > xmax then
             if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-              if (x1-x0) > 0 then
-                x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
-              else
-                x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+              if horizontal_test_linear_segment(x0,y0,x1,y1,xmax,ymin ) == false then
+                if (x1-x0) > 0 then
+                  x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+                else
+                  x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+                end
+                table.insert(shortcuts[i],x0s)
+                table.insert(shortcuts[i], y0s)
+                table.insert(shortcuts[i], x1s)
+                table.insert(shortcuts[i], y1s)
               end
-              table.insert(shortcuts[i],x0s)
-              table.insert(shortcuts[i], y0s)
-              table.insert(shortcuts[i], x1s)
-              table.insert(shortcuts[i], y1s)
             end
           end
         end
@@ -694,6 +698,7 @@ function fillData(scene, tree, fatherInd, ind)
 			if testSegment(tree, ind, shape, segment_num) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
         tree[ind].segments = tree[ind].segments + 1
+        --tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
       end
@@ -1152,13 +1157,13 @@ function _M.accelerate(scene, viewport)
     subdivide(new_scene, tree, "0", 2 , 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-    for i=1,#tree["03"].data do
-      io.write(i,": ")
-      for j in ipairs(tree["03"].data[i]) do
-        io.write(tree["03"].data[i][j], " ")
-      end
-      io.write("\n")
-    end
+    -- for i=1,#tree["03"].data do
+    --   io.write(i,": ")
+    --   for j in ipairs(tree["03"].data[i]) do
+    --     io.write(tree["03"].data[i][j], " ")
+    --   end
+    --   io.write("\n")
+    -- end
 
     new_scene.tree = tree
 	  return new_scene
@@ -1658,7 +1663,8 @@ end
 -- It simply allocates the image, samples each pixel center,
 -- and saves the image into the file.
 function _M.render(scene, viewport, file, args)
-   --for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
+  --  for k,el in pairs(scene.tree['03'].shortcuts[1]) do print(k,el) end
+  print(scene.tree['031'].winding[1])
     parsed = parseargs(args)
     local pattern = parsed.pattern
     local p = parsed.p
