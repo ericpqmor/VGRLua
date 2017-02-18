@@ -1349,20 +1349,67 @@ local function LinearMapping(x, y, xp1, yp1, xp2, yp2)
 	return l
 end
 
+local function BilinearInterpolation(x, y, img)
+	local x1 = math.floor(x)
+	local y1 = math.floor(y)
+	local x2 = math.ceil(x)
+	local y2 = math.ceil(y)
+	-----edges-----
+	if (x1 == 0) and (y1 == 0) then return img:get_pixel(x2,y2)
+	elseif (x1 == 0) then
+		local r1,g1,b1,a1 = img:get_pixel(x2, y1)
+		local r2,g2,b2,a2 = img:get_pixel(x2, y2)
+		local r = (y2 - y)*r1 + (y - y1)*r2
+		local g = (y2 - y)*g1 + (y - y1)*g2
+		local b = (y2 - y)*b1 + (y - y1)*b2
+		if a1~=nil and a2~=nil then
+			a = (y2 - y)*r1 + (y - y1)*r2 end
+		return r,g,b,a
+	elseif (y1 == 0) then
+		local r1,g1,b1,a1 = img:get_pixel(x1, y2)
+		local r2,g2,b2,a2 = img:get_pixel(x2, y2)
+		local r = (x2 - x)*r1 + (x - x1)*r2
+		local g = (x2 - x)*g1 + (x - x1)*g2
+		local b = (x2 - x)*b1 + (x - x1)*b2
+		if a1~=nil and a2~=nil then
+			a = (y2 - y)*r1 + (y - y1)*r2 end
+		return r,g,b,a
+	end
+	---------------
+	local fx1y1,fx1y2,fx2y1,fx2y2,fxy1,fxy2,fxy = {},{},{},{},{},{},{}
+	fx1y1[1],fx1y1[2],fx1y1[3],fx1y1[4] = img:get_pixel(x1, y1)
+	fx1y2[1],fx1y2[2],fx1y2[3],fx1y2[4] = img:get_pixel(x1, y2)
+	fx2y1[1],fx2y1[2],fx2y1[3],fx2y1[4] = img:get_pixel(x2, y1)
+	fx2y2[1],fx2y2[2],fx2y2[3],fx2y2[4] = img:get_pixel(x2, y2)
+	for i = 1, 4 do
+		if (fx1y1[i] ~= nil) and (fx1y2[i] ~= nil) and (fx2y1[i] ~= nil) and (fx2y2[i] ~= nil) then
+			fxy1[i] = fx1y1[i]*(x2 - x) + fx2y1[i]*(x - x1)
+			fxy2[i] = fx1y2[i]*(x2 - x) + fx2y2[i]*(x - x1)
+		end
+	end
+	for i = 1, 4 do
+		if (fxy1[i] ~= nil) and (fxy2[i] ~= nil) then
+			fxy[i] = fxy1[i]*(y2 - y) + fxy2[i]*(y - y1)
+		end
+	end
+	return fxy[1],fxy[2],fxy[3],fxy[4]
+end
+
+
 function texture(accel, x, y, paint)
 	local spread = paint.spread
 	local G = accel.xf*paint.xf
 	G = G:inverse()
 	x,y = G:apply(x,y)
-	 local img = paint.image
+	local img = paint.image
 	local width, height = img.width, img.height
 	local tx = LinearMapping(x,0,0,0,width,0)
 	local ty = LinearMapping(0,y,0,0,0,height)
 	tx = wrap_function(tx*width,spread)
 	ty = wrap_function(ty*height,spread)
-    tx = math.ceil(tx*width)
-    ty = math.ceil(ty*height)
-	local r,g,b,a = img:get_pixel(tx, ty)
+     	tx = tx*width
+	ty = ty*height
+	local r,g,b,a = BilinearInterpolation(tx, ty, img)
 	if a == nil then a = 1 end
 	return r,g,b,a
 end
@@ -1579,10 +1626,10 @@ end
 
 
 function gamma_correction(sr,sg,sb,sa,n)
-	sr = 2*sr/n
-    sg = 2*sg/n
-    sb = 2*sb/n
-    sa = 2*sa/n
+    sr = sr/n
+    sg = sg/n
+    sb = sb/n
+    sa = sa/n
 
     local r = sr^2.2
     local g = sg^2.2
@@ -1592,27 +1639,44 @@ function gamma_correction(sr,sg,sb,sa,n)
     return r,g,b,a
 end
 
+local function GaussianKernel(x,y)
+  return math.exp(-((x^2)/2 + (y^2)/2))/0.92131
+end
+
+local function UniformKernel(x,y)
+  if (math.abs(x) <= 1/2) and (math.abs(y) <= 1/2) then
+    return 1
+  else
+    return 0
+  end
+end
+
 --  This is the other function you have to implement.
 --  It receives the acceleration datastructure, the sampling pattern,
 --  and a sampling position. It returns the color at that position.
-local function supersample(accel, pattern, x, y, path_num)
+local function supersample(accel, pattern, x, y, path_num, kernel)
     -- Implement your own version
-    local r,g,b,a
     local sr,sg,sb,sa = 0,0,0,0
+    if kernel == nil then
+        kernel = UniformKernel
+    end
+    local W = 0
     for i=1, #pattern-1,2 do
+	local w_i = kernel(pattern[i], pattern[i+1])
     	local rx,gx,bx,ax = sample(accel,x+pattern[i],y+pattern[i+1], path_num)
-     	sr = sr + rx^(1/2.2)
-    	sg = sg + gx^(1/2.2)
-    	sb = sb + bx^(1/2.2)
-    	sa = sa + ax^(1/2.2)
+     	sr = sr + w_i*rx^(1/2.2)
+    	sg = sg + w_i*gx^(1/2.2)
+    	sb = sb + w_i*bx^(1/2.2)
+    	sa = sa + w_i*ax^(1/2.2)
+	W = W + w_i
     end
 
-    return gamma_correction(sr,sg,sb,sa,#pattern)
+    return gamma_correction(sr,sg,sb,sa,W)
 end
 
 local function parseargs(args)
     local parsed = {
-        pattern = blue[1],
+        pattern = blue[8],
         tx = 0,
         ty = 0,
         p = nil,
@@ -1702,7 +1766,7 @@ function _M.render(scene, viewport, file, args)
           local y = vymin+i-1.+.5
           for j = 1, width do
               local x = vxmin+j-1.+.5
-              img:set_pixel(j, i, supersample(scene, pattern, x, y, p))
+              img:set_pixel(j, i, supersample(scene, pattern, x, y, p, GaussianKernel))
           end
       end
     stderr("\n")
