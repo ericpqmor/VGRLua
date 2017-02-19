@@ -454,34 +454,38 @@ local function CreateShortcuts(scene,data, bb)
         local offset = scene.shapes[i].offsets[instruction]
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
-          if x0 > xmax or x1 > xmax then
-            if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-              if util.sign(x1-x0) > 0 then
-                x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
-              else
-                x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+          if x1 ~= x0 then
+            if x0 > xmax or x1 > xmax then
+              if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+                if util.sign(x1-x0) > 0 then
+                  x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+                else
+                  x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+                end
+                table.insert(shortcuts[i],x0s)
+                table.insert(shortcuts[i], y0s)
+                table.insert(shortcuts[i], x1s)
+                table.insert(shortcuts[i], y1s)
               end
-              table.insert(shortcuts[i],x0s)
-              table.insert(shortcuts[i], y0s)
-              table.insert(shortcuts[i], x1s)
-              table.insert(shortcuts[i], y1s)
             end
           end
         elseif scene.shapes[i].instructions[instruction] == 'end_open_contour' or scene.shapes[i].instructions[instruction] == 'end_closed_contour' then
           local x0, y0, len = unpack(scene.shapes[i].data, offset, offset+2)
           local begin_off = scene.shapes[i].offsets[instruction-len]
           local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
-          if x0 > xmax or x1 > xmax then
-            if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
-              if (x1-x0) > 0 then
-                x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
-              else
-                x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+          if x1 ~= x0 then
+            if x0 > xmax or x1 > xmax then
+              if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+                if (x1-x0) > 0 then
+                  x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
+                else
+                  x0s, y0s, x1s, y1s = x0, ymax, x0, y0
+                end
+                table.insert(shortcuts[i],x0s)
+                table.insert(shortcuts[i], y0s)
+                table.insert(shortcuts[i], x1s)
+                table.insert(shortcuts[i], y1s)
               end
-              table.insert(shortcuts[i],x0s)
-              table.insert(shortcuts[i], y0s)
-              table.insert(shortcuts[i], x1s)
-              table.insert(shortcuts[i], y1s)
             end
           end
         end
@@ -503,6 +507,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
+    if x1 == x0 then return 0 end
     if bymin < ymax and bymin > ymin then
       if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) then return util.sign(y1-y0) end
     end
@@ -514,6 +519,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local x1,y1 = unpack(shape.data, offset_begin+1, offset_begin+2)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
+    if x0 == x1 then return 0 end
     if bymin <= ymax and bymin >= ymin then
       if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
     end
@@ -538,7 +544,18 @@ local function WindingShortcuts(tree,ind,fatherind,  shape)
 
   return winding
 end
-
+-----------------------------------------
+--[[    DEBUGGING GRID       ]]--
+-----------------------------------------
+local function InsideGrid(tree, ind, x, y)
+local xmin, ymin, xmax, ymax = unpack(tree[ind].boundingBox)
+if insideBoundingBox((xmax-xmin)/2 - 1, ymin, (xmax-xmin)/2 + 1, ymax, x, y) or insideBoundingBox(xmin, (ymax-ymin)/2 - 1, xmax, (ymax-ymin)/2 +1 , x, y) then
+  return true
+else
+  return false
+end
+return false
+end
 -----------------------------------------
 --[[		SHORTCUT TREE 			 ]]--
 -----------------------------------------
@@ -582,6 +599,7 @@ end
 
 function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   local xm,ym = (x0+x1)/2,(y0+y1)/2
+  if x0 == x1 then return false end
   if (xmin<x0 and x0<=xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or
     (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
     return true
@@ -1150,7 +1168,7 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene, tree, "0", 1 , 100)
+    subdivide(new_scene, tree, "0", 2 , 100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
     -- for i=1,#tree["03"].data do
@@ -1506,6 +1524,7 @@ local tree = accel.tree
 local ind = '0'
 -- encontra uma folha
 while tree[ind].leaf == false do
+  if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
   for i = 1, 4, 1 do
     local n_ind = ind .. i
     local bb = tree[n_ind].boundingBox
