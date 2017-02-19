@@ -549,7 +549,7 @@ end
 -----------------------------------------
 local function InsideGrid(tree, ind, x, y)
 local xmin, ymin, xmax, ymax = unpack(tree[ind].boundingBox)
-if insideBoundingBox((xmax+xmin)/2 - 1, ymin, (xmax+xmin)/2 + 1, ymax, x, y) or insideBoundingBox(xmin, (ymax+ymin)/2 - 1, xmax, (ymax+ymin)/2 +1 , x, y) then
+if insideBoundingBox((xmax-xmin)/2 - 1, ymin, (xmax-xmin)/2 + 1, ymax, x, y) or insideBoundingBox(xmin, (ymax-ymin)/2 - 1, xmax, (ymax-ymin)/2 +1 , x, y) then
   return true
 else
   return false
@@ -562,8 +562,8 @@ end
 local function createBoundingBox(bb, read)
   local xmin, xmax, ymin, ymax
   local vxmin, vymin, vxmax, vymax = unpack(bb,1,4)
-  local Dx = (vxmax - vxmin)/2
-  local Dy = (vymax - vymin)/2
+  local Dx = (vxmin + vxmax)/2
+  local Dy = (vymin + vymax)/2
 
   if read == 1 then
     xmax = vxmin + Dx
@@ -1510,12 +1510,10 @@ local rept = false
 local rec = false
 local tree = accel.tree
 local ind = '0'
-local xmin,ymin,xmax,ymax = unpack(tree["01"].boundingBox)
---print("asidohasodhaso:", xmin,ymin,xmax,ymax)
 -- encontra uma folha
 while tree[ind].leaf == false do
+  if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
   for i = 1, 4, 1 do
-    if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
     local n_ind = ind .. i
     local bb = tree[n_ind].boundingBox
     local xmin, ymin, xmax, ymax = unpack(bb)
