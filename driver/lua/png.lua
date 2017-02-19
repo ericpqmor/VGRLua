@@ -454,9 +454,9 @@ local function CreateShortcuts(scene,data, bb)
         local offset = scene.shapes[i].offsets[instruction]
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
-          if x1 ~= x0 then
+          if x1 ~= x0 and y1 ~= y0 then
             if x0 > xmax or x1 > xmax then
-              if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+              if LinearIntersection (x0,y0,x1,y1,xmin,ymin+0.05, xmax, ymax) then
                 if util.sign(x1-x0) > 0 then
                   x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
                 else
@@ -509,7 +509,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local ymin = math.min(y0,y1)
     if x1 == x0 then return 0 end
     if bymin < ymax and bymin > ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) then return util.sign(y1-y0) end
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) and y0 ~= y1 then return util.sign(y1-y0) end
     end
   end
 
@@ -521,7 +521,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local ymin = math.min(y0,y1)
     if x0 == x1 then return 0 end
     if bymin <= ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) and y0~=y1 then return util.sign(y1-y0) end
     end
   end
 
@@ -705,16 +705,17 @@ function fillData(scene, tree, fatherInd, ind)
 	local shape = scene.shapes[k]
 		tree[ind].data[k] = {}
     tree[ind].winding[k] = tree[fatherInd].winding[k]
+    if ind == "033" then print("Inheritance from father: ", tree[ind].winding[k]) end
 		for index, segment_num in pairs(tree[fatherInd].data[k]) do
 			if testSegment(tree, ind, shape, segment_num) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
         tree[ind].segments = tree[ind].segments + 1
-        tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
-      else
-        tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
       end
+      tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
+      if ind == "033" then print("Winding increments: ", tree[ind].winding[k]) end
     end
 	tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
+   if ind == "033" then print("After shortcut: ", tree[ind].winding[k]) end
   for i,j in pairs(tree[ind].data[k]) do
   print(ind,j) end
   end
@@ -1508,6 +1509,7 @@ local function sample(accel, x, y, path_num)
 local r,g,b,a = 0,0,0,0
 local rept = false
 local rec = false
+if x == 15.5 and y == 32.5 then rec = true end
 local tree = accel.tree
 local ind = '0'
 local xmin,ymin,xmax,ymax = unpack(tree["01"].boundingBox)
@@ -1534,6 +1536,7 @@ for i = #tree[ind].data, 1, -1 do
       local shape = accel.shapes[i]
       local paint = accel.paints[i]
       local wind_num = tree[ind].winding[i]
+      if rec then print("My initial winding is: ", wind_num) end
       for i_seg = 1, j do
         wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
       end
