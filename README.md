@@ -8,7 +8,11 @@ The png.lua (Implementation itself) was made by Eric Moreira, Joaquin del Priore
 #Winding logic:
 
 1- Starts with father's winding;
+
 2- Winding increment each child cell using father's segments (Both normal and shortcut);
+
 3- Subdivide segments to their respective child cells;
+
 4- Create the child cells' shortcut
+
 5 - Sample
