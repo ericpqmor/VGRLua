@@ -1568,7 +1568,7 @@ end
 
 local function ParabolicKernel(x,y)
   if (math.abs(x) <= 1/2) and (math.abs(y) <= 1/2) then	
-    return (1 - x^2 - y^2)*1.2
+    return (1/2 - x^2 - y^2)*3
   else
     return 0
   end
