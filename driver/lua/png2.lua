@@ -601,7 +601,7 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   local xm,ym = (x0+x1)/2,(y0+y1)/2
   local rec = false
   if xmin == 0 and xmax == 100 and ymin == 100 and ymax == 200 then rec = true end
-  if y0 == y1 and (x1 == xmax or x1 == xmin) then return false end
+  -- if y0 == y1 and (x1 == xmax or x1 == xmin) then return false end
   if x0 == x1 and (x1 <= xmax) and y0 ~= y1 then return true end
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or
     (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
@@ -613,11 +613,11 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
        sxmin <= xmax and xmax <= symax then
           return true
     end
-    -- if vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymax-0.05) == true and
-    --   vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymin+0.05) == false and
-    --   sxmin <= xmin and xmin <= sxmax then
-    --       return true
-    -- end
+    if vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymax-0.05) == true and
+      vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymin+0.05) == false and
+      sxmin <= xmin and xmin <= sxmax then
+          return true
+    end
     if horizontal_test_linear_segment(x0,y0,x1,y1,xmin-0.05,ymin) == true and
       horizontal_test_linear_segment(x0,y0,x1,y1,xmax-0.05,ymin) == false and
       symin <= ymin and ymin <= symax then
@@ -1161,7 +1161,7 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene,tree,"0",1,100)
+    subdivide(new_scene,tree,"0",1  ,100)
 
 
     new_scene.tree = tree
@@ -1667,9 +1667,9 @@ function _M.render(scene, viewport, file, args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
--- for k,el in pairs(scene.tree['014'].data[1]) do print(k,el) end
-      -- for k,el in pairs(scene.tree['014'].shortcuts[1]) do print(k,el) end
-      -- print(scene.tree['01'].winding[1])
+for k,el in pairs(scene.tree['01'].data[1]) do print(k,el) end
+      for k,el in pairs(scene.tree['01'].shortcuts[1]) do print(k,el) end
+      print(scene.tree['01'].winding[1])
     -- Get viewport
       local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
       if tx ~= nil then
