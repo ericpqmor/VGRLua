@@ -453,8 +453,8 @@ local function CreateShortcuts(scene,data, bb)
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
           if x1 ~= x0 then
-            if (xmax - x0)*(xmax - x1) <= 0 then
-              if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax,ymax) then
+            if (xmax - x0)*(xmax - x1) < 0 then
+              if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax+0.5,ymax) then
                 if util.sign(x1-x0) > 0 then
                   x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
                 else
@@ -472,8 +472,8 @@ local function CreateShortcuts(scene,data, bb)
           local begin_off = scene.shapes[i].offsets[instruction-len]
           local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
           if x1 ~= x0 then
-            if (xmax - x0)*(xmax - x1) <= 0 then
-              if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax, ymax) then
+            if (xmax - x0)*(xmax - x1) < 0 then
+              if LinearIntersection (x0,y0,x1,y1,xmin,ymin, xmax+0.5, ymax) then
                 if (x1-x0) > 0 then
                   x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
                 else
@@ -507,7 +507,7 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local ymin = math.min(y0,y1)
     --FIXME
     if x1 == x0 and (x1 == xmin or x1 == xmax) then return 0 end
-    if bymin <= ymax and bymin >= ymin then
+    if (bymin -y0)*(bymin - y1) <= 0 then
       if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) then return util.sign(y1-y0) end
     end
   end
@@ -519,7 +519,7 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     if x0 == x1 then return 0 end
-    if bymin <= ymax and bymin >= ymin then
+    if (bymin-y0)*(bymin - y1) <= 0 then
       if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
     end
   end
@@ -535,8 +535,10 @@ local function WindingShortcuts(tree,ind,fatherind,  shape)
     local n = #shortcuts
     for k =1, n, 4 do
       local x0,y0,x1,y1 = unpack(shortcuts, k, k+3)
-      if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin + 0.05) then
-        winding = winding + util.sign(y1-y0)
+      if (ymin -y0)*(ymin - y1) <= 0 then
+        if horizontal_test_linear_segment(x0,y0, x1, y1, xmin, ymin) == true then
+          winding = winding + util.sign(y1-y0)
+        end
       end
     end
   end
@@ -599,7 +601,8 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   local xm,ym = (x0+x1)/2,(y0+y1)/2
   local rec = false
   if xmin == 0 and xmax == 100 and ymin == 100 and ymax == 200 then rec = true end
-  if x0 == x1 and (x1 == xmax or x1 == xmin) then return false end
+  if y0 == y1 and (x1 == xmax or x1 == xmin) then return false end
+  if x0 == x1 and (x1 <= xmax) and y0 ~= y1 then return true end
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or
     (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
     return true
@@ -610,11 +613,11 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
        sxmin <= xmax and xmax <= symax then
           return true
     end
-    if vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymax-0.05) == true and
-      vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymin+0.05) == false and
-      sxmin <= xmin and xmin <= sxmax then
-          return true
-    end
+    -- if vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymax-0.05) == true and
+    --   vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymin+0.05) == false and
+    --   sxmin <= xmin and xmin <= sxmax then
+    --       return true
+    -- end
     if horizontal_test_linear_segment(x0,y0,x1,y1,xmin-0.05,ymin) == true and
       horizontal_test_linear_segment(x0,y0,x1,y1,xmax-0.05,ymin) == false and
       symin <= ymin and ymin <= symax then
@@ -713,10 +716,10 @@ function fillData(scene, tree, fatherInd, ind)
       if testSegment(tree, ind, shape, segment_num,k) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
         tree[ind].segments = tree[ind].segments + 1
+        tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k)
       end
-      tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k)
     end
-	tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
+	-- tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
   end
 end
 
@@ -727,7 +730,7 @@ function testSegment(tree, ind, shape, segment_num, k)
     --Olha a scene original
     local instruction = shape.instructions[segment_num]
     local offset = shape.offsets[segment_num]
-    -- if ind == '01' and k == 2 and segment_num == 13 t  end
+
     if instruction == "begin_closed_contour" or instruction == "begin_open_contour" then
       return false
     end
@@ -736,12 +739,12 @@ function testSegment(tree, ind, shape, segment_num, k)
       local x0,y0,len = unpack(shape.data, offset, offset+2)
       local offset_begin = shape.offsets[segment_num - len]
       local xclose, yclose = unpack(shape.data, offset_begin+1, offset_begin+2)
+
       return insidetest_linear(x0,y0,xclose,yclose,xmin,ymin,xmax,ymax)
     end
 
     if instruction == "linear_segment" then
       local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
-          if ind == '01' and k == 2 and segment_num == 13 then print(x0,y0x,x1,y1)  end
       return insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
     end
 
@@ -804,7 +807,10 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
 
     fillData(scene, tree, fatherInd, ind) -- aqui adiciona os dados, aparentemente é onde precisa de debug
     tree[ind].shortcuts = CreateShortcuts(scene, tree[ind].data, tree[ind].boundingBox)
-    if isLeaf(tree, ind, maxdepth, maxseg) == true then
+      for k, el in pairs(tree[ind].data) do
+        tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, ind, k)
+     end
+      if isLeaf(tree, ind, maxdepth, maxseg) == true then
       tree[ind].leaf = true
     else
       tree[ind].leaf = false
@@ -1153,9 +1159,7 @@ function _M.accelerate(scene, viewport)
     		paint.a3 = c/den
     	end
     end
-    local offset = new_scene.shapes[2].offsets[13]
-    local x0,y0,x1,y1 = unpack(new_scene.shapes[2].data, offset, offset+3)
-    print(x0,y0,x1,y1)
+
     local tree = initializeTree(new_scene, viewport)
     subdivide(new_scene,tree,"0",1,100)
 
@@ -1663,8 +1667,9 @@ function _M.render(scene, viewport, file, args)
     local pattern = parsed.pattern
     local p = parsed.p
     local tx, ty = parsed.tx, parsed.ty
-    -- for k,el in pairs(scene.tree['0'].data[2]) do print(k,el) end
-    -- print(scene.tree['01'].winding[2])
+-- for k,el in pairs(scene.tree['014'].data[1]) do print(k,el) end
+      -- for k,el in pairs(scene.tree['014'].shortcuts[1]) do print(k,el) end
+      -- print(scene.tree['01'].winding[1])
     -- Get viewport
       local vxmin, vymin, vxmax, vymax = unpack(viewport, 1, 4)
       if tx ~= nil then
@@ -1686,7 +1691,7 @@ function _M.render(scene, viewport, file, args)
           local y = vymin+i-1.+.5
           for j = 1, width do
               local x = vxmin+j-1.+.5
-              img:set_pixel(j, i, supersample(scene, pattern, x, y, p, GaussianKernel))
+              img:set_pixel(j, i, supersample(scene, pattern, x, y, p, UniformKernel))
           end
       end
     stderr("\n")
