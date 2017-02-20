@@ -432,7 +432,7 @@ end
 --[[      SHORTCUTS          ]] --
 ----------------------------------------
 local function LinearIntersection(x0,y0,x1,y1, xmin, ymin, xmax, ymax)
-  if vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymax) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymin) == false then
+  if vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymax-0.05) == true and vertical_test_linear_segment(x0,y0,x1,y1,xmax, ymin+0.05) == false then
     return true
   else
     return false
@@ -440,12 +440,12 @@ local function LinearIntersection(x0,y0,x1,y1, xmin, ymin, xmax, ymax)
   return false
 end
 
-
 local function CreateShortcuts(scene,data, bb)
   local xmin, ymin, xmax, ymax = unpack(bb)
   local shortcuts = {}
   local rec = false
-  if xmin == 0 and xmax == 100 and ymin == 0 and ymax == 100 then rec = true end
+  if xmin == 0 and xmax == 125 and ymin == 0 and ymax == 190.5 then rec = true end
+  if rec then print("Fuck me") end
   for i in ipairs(data) do
     shortcuts[i] = {}
     if data[i] ~= nil then
@@ -454,14 +454,17 @@ local function CreateShortcuts(scene,data, bb)
         local offset = scene.shapes[i].offsets[instruction]
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
-          if x1 ~= x0 and y1 ~= y0 then
-            if x0 > xmax or x1 > xmax then
-              if LinearIntersection (x0,y0,x1,y1,xmin,ymin+0.05, xmax, ymax) then
+          if rec then print("Shortcut: ",x0,y0,x1,y1) end
+          if x1 ~= x0 then
+            if (xmax - x0)*(xmax - x1) <= 0 then
+              if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax,ymax) then
                 if util.sign(x1-x0) > 0 then
                   x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
                 else
                   x0s, y0s, x1s, y1s = x0, ymax, x0, y0
                 end
+                if rec then print("Shortcut created: ",x0s,y0s,x1s,y1s) end
+                --print("The Winding Shortcut: ",x0s,y0s,x1s,y1s)
                 table.insert(shortcuts[i],x0s)
                 table.insert(shortcuts[i], y0s)
                 table.insert(shortcuts[i], x1s)
@@ -498,18 +501,21 @@ end
 -----------------------------------------
 --[[   WINDING INCREMENTS    ]]--
 -----------------------------------------
-local function WindingIncrement(tree, ind, shape, segment_num)
+local function WindingIncrement(tree, ind, shape, segment_num, k)
   local bb = tree[ind].boundingBox
   local offset = shape.offsets[segment_num]
   local instruction = shape.instructions[segment_num]
-  local bxmin, bymin, bxmax, bymax = bb[1], bb[2], bb[3], bb[4]
+  local bxmin, bymin, bxmax, bymax = unpack(bb,1,4)
   if instruction == 'linear_segment' then
     local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
+    if ind == "011" and k == 2 then print(x0,y0,x1,y1, "is the shortcut I must test for the bounding box: ", bxmin, bymin, bxmax, bymax) end
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
-    if x1 == x0 then return 0 end
-    if bymin < ymax and bymin > ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) and y0 ~= y1 then return util.sign(y1-y0) end
+    --FIXME
+    -- x0,y0 = 119,291 and x1,y1 = 125,282
+    if x1 == x0 and (x1 == xmin or x1 == xmax) then return 0 end
+    if bymin <= ymax and bymin >= ymin then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) then return util.sign(y1-y0) end
     end
   end
 
@@ -521,7 +527,7 @@ local function WindingIncrement(tree, ind, shape, segment_num)
     local ymin = math.min(y0,y1)
     if x0 == x1 then return 0 end
     if bymin <= ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) and y0~=y1 then return util.sign(y1-y0) end
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
     end
   end
 
@@ -541,7 +547,6 @@ local function WindingShortcuts(tree,ind,fatherind,  shape)
       end
     end
   end
-
   return winding
 end
 -----------------------------------------
@@ -599,31 +604,41 @@ end
 
 function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   local xm,ym = (x0+x1)/2,(y0+y1)/2
-  if x0 == x1 then return false end
-  if (xmin<x0 and x0<=xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or
+  local rec = false
+  if xmin == 0 and xmax == 100 and ymin == 100 and ymax == 200 then rec = true end
+  if x0 == x1 and (x1 == xmax or x1 == xmin) then return false end
+  if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or
     (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
     return true
   else
-    if vertical_linear_test(x0,y0,x1,y1,xmax,ymax-0.05,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-       vertical_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-           print("Rect: ", x0,y0,x1,y1)
+   local sxmin, symin, sxmax, symax = math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1) 
+   --print(sxmin, symin, sxmax, symax, "bseaowj")
+    if vertical_test_linear_segment(x0,y0,x1,y1,xmax,ymax-0.05) == true and
+       vertical_test_linear_segment(x0,y0,x1,y1,xmax,ymin+0.05) == false and
+       sxmin <= xmax and xmax <= symax then
+           --print("Rect: ", x0,y0,x1,y1)
           return true
     end
-    if vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      vertical_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+    if vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymax-0.05) == true and
+      vertical_test_linear_segment(x0,y0,x1,y1,xmin,ymin+0.05) == false and
+      sxmin <= xmin and xmin <= sxmax then
           return true
     end
-    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      horizontal_linear_test(x0,y0,x1,y1,xmax,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+    if horizontal_test_linear_segment(x0,y0,x1,y1,xmin-0.05,ymin) == true and
+      horizontal_test_linear_segment(x0,y0,x1,y1,xmax-0.05,ymin) == false and
+      symin <= ymin and ymin <= symax then
           return true
     end
-    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      horizontal_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
+    if horizontal_test_linear_segment(x0,y0,x1,y1,xmin+0.05,ymax) == true and
+      horizontal_test_linear_segment(x0,y0,x1,y1,xmax-0.05,ymax) == false and
+      symin <= ymax and ymax <= symax then
           return true
     end
+    --
+    -- print(horizontal_linear_test(x0,y0,x1,y1,xmin-0.05,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)))
   end
 
-    if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
+    --if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
      -- if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then return true end
      -- if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then return true end
    -- if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end
@@ -705,19 +720,19 @@ function fillData(scene, tree, fatherInd, ind)
 	local shape = scene.shapes[k]
 		tree[ind].data[k] = {}
     tree[ind].winding[k] = tree[fatherInd].winding[k]
-    if ind == "033" then print("Inheritance from father: ", tree[ind].winding[k]) end
+    -- if ind == "032" and k == 1 then print("Inheritance: ", tree[ind].winding[k]) end
 		for index, segment_num in pairs(tree[fatherInd].data[k]) do
 			if testSegment(tree, ind, shape, segment_num) == true then
 				tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
         tree[ind].segments = tree[ind].segments + 1
       end
-      tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num)
-      if ind == "033" then print("Winding increments: ", tree[ind].winding[k]) end
+      tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k)
+      if ind == "011" and k == 2 then print("After increment: ", tree[ind].winding[k]) end
     end
-	tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
-   if ind == "033" then print("After shortcut: ", tree[ind].winding[k]) end
-  for i,j in pairs(tree[ind].data[k]) do
-  print(ind,j) end
+	--tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
+  -- print("After wind shortcut: ", wind_num, ind)
+  -- for i,j in pairs(tree[ind].data[k]) do
+  --print(ind,j) end
   end
 end
 
@@ -743,6 +758,8 @@ function testSegment(tree, ind, shape, segment_num)
     if instruction == "linear_segment" then
       local offset = shape.offsets[segment_num]
       local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
+      -- if ind == "01" then print(x0,y0,x1,y1," is being tested for the ind") end
+      --print(insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax))
       return insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
     end
 
@@ -800,6 +817,7 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
     --Criação de bounding boxes
     local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
     tree[ind].boundingBox = {xmin,ymin,xmax,ymax}
+    print("Bounding box: ", xmin, ymin, xmax, ymax)
 
     tree[ind].depth = tree[fatherInd].depth + 1
     tree[ind].segments = 0
@@ -1157,15 +1175,16 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene, tree, "0", 2 , 100)
+    subdivide(new_scene,tree,"0",2,100)
 
    	--UNIT TEST - TREE[IND].DATA FILLING:
-    -- for i=1,#tree["03"].data do
-    --   io.write(i,": ")
-    --   for j in ipairs(tree["03"].data[i]) do
-    --     io.write(tree["03"].data[i][j], " ")
-    --   end
-    --   io.write("\n")
+    -- print("Test subdivision: ")
+    -- for i=1,#tree["01"].data do
+      -- io.write(i,": ")
+      -- for j in ipairs(tree["01"].data[i]) do
+        -- io.write(tree["01"].data[i][j], " ")
+      -- end
+      -- io.write("\n")
     -- end
 
     new_scene.tree = tree
@@ -1469,25 +1488,25 @@ function wind(accel, i, i_seg, x, y)
 	return 0
 end
 local function windshortcuts(accel,ind, i, x, y)
-local tree = accel.tree
-if x == 35.5 and y == 65.5 then print(ind) end
-local shortcuts = tree[ind].shortcuts[i]
-local wind_shorcut = 0
-if shortcuts ~= nil then
-for data = 1, #shortcuts, 4 do
-  local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
-  local ymax = math.max(y0,y1)
-  local ymin = math.min(y0,y1)
-  local xmin = math.min(x0,x1)
-  local xmax = math.max(x0,x1)
-  if y <= ymax and y >= ymin then
-    if horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) then
-      wind_shorcut = wind_shorcut + util.sign(y1-y0)
+  local tree = accel.tree
+  if x == 35.5 and y == 65.5 then print(ind) end
+  local shortcuts = tree[ind].shortcuts[i]
+  local wind_shorcut = 0
+  if shortcuts ~= nil then
+  for data = 1, #shortcuts, 4 do
+    local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
+    local ymax = math.max(y0,y1)
+    local ymin = math.min(y0,y1)
+    local xmin = math.min(x0,x1)
+    local xmax = math.max(x0,x1)
+    if y <= ymax and y >= ymin then
+      if horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax) then
+        wind_shorcut = wind_shorcut + util.sign(y1-y0)
+      end
     end
   end
-end
-end
-return wind_shorcut
+  end
+  return wind_shorcut
 end
 
 
@@ -1509,7 +1528,7 @@ local function sample(accel, x, y, path_num)
 local r,g,b,a = 0,0,0,0
 local rept = false
 local rec = false
-if x == 15.5 and y == 32.5 then rec = true end
+if x == 25.5 and y == 75.5 then return 0,255,0,1 end
 local tree = accel.tree
 local ind = '0'
 local xmin,ymin,xmax,ymax = unpack(tree["01"].boundingBox)
@@ -1536,7 +1555,6 @@ for i = #tree[ind].data, 1, -1 do
       local shape = accel.shapes[i]
       local paint = accel.paints[i]
       local wind_num = tree[ind].winding[i]
-      if rec then print("My initial winding is: ", wind_num) end
       for i_seg = 1, j do
         wind_num = wind_num + wind(accel, i, tree[ind].data[i][i_seg], x, y)
       end
