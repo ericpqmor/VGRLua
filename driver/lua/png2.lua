@@ -1554,16 +1554,24 @@ function gamma_correction(sr,sg,sb,sa,n)
     sb = sb/n
     sa = sa/n
 
-    local r = sr^2.2
-    local g = sg^2.2
-    local b = sb^2.2
-    local a = sa^2.2
+    local r = sr^(1/2.2)
+    local g = sg^(1/2.2)
+    local b = sb^(1/2.2)
+    local a = sa^(1/2.2)
 
     return r,g,b,a
 end
 
 local function GaussianKernel(x,y)
-  return math.exp(-((x^2)/2 + (y^2)/2))/0.92131
+  return math.exp(-((x^2)/2 + (y^2)/2))*1.08541099087
+end
+
+local function ParabolicKernel(x,y)
+  if (math.abs(x) <= 1/2) and (math.abs(y) <= 1/2) then	
+    return (1 - x^2 - y^2)*1.2
+  else
+    return 0
+  end
 end
 
 local function UniformKernel(x,y)
@@ -1587,10 +1595,10 @@ local function supersample(accel, pattern, x, y, path_num, kernel)
     for i=1, #pattern-1,2 do
 	local w_i = kernel(pattern[i], pattern[i+1])
     	local rx,gx,bx,ax = sample(accel,x+pattern[i],y+pattern[i+1], path_num)
-     	sr = sr + w_i*rx^(1/2.2)
-    	sg = sg + w_i*gx^(1/2.2)
-    	sb = sb + w_i*bx^(1/2.2)
-    	sa = sa + w_i*ax^(1/2.2)
+     	sr = sr + w_i*rx^(2.2)
+    	sg = sg + w_i*gx^(2.2)
+    	sb = sb + w_i*bx^(2.2)
+    	sa = sa + w_i*ax^(2.2)
 	W = W + w_i
     end
 
