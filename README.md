@@ -5,7 +5,7 @@ The driver code was made by Diego Nehab (IMPA).
 
 The png.lua (Implementation itself) was made by Eric Moreira, Joaquin del Priore and Leonardo Ferreira.
 
-##Winding logic:
+#Winding logic:
 
 1- Starts with father's winding;
 2- Winding increment each child cell using father's segments (Both normal and shortcut);

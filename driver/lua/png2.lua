@@ -751,7 +751,7 @@ function testSegment(tree, ind, shape, segment_num, k)
     if instruction == "cubic_segment" then
       local offset = shape.offsets[segment_num]
       local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,offset,offset+7)
-      return insidetest_cubic
+      return insidetest_cubic(x0,y0,x1,y1,x2,y2,x3,y3,xmin,ymin,xmax,ymax)
     end
 
     if instruction == "quadratic_segment" then
