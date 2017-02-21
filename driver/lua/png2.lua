@@ -1516,8 +1516,9 @@ while tree[ind].leaf == false do
     local xmin, ymin, xmax, ymax = unpack(bb)
     if insideBoundingBox(xmin, ymin, xmax, ymax, x, y) then
       ind = n_ind
-      break
+      break			
     end
+    if i == 4 then return 1,1,1,1 end
   end
 end
 -- dentro da folha itera nos shapes
