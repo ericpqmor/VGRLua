@@ -88,8 +88,14 @@ local nvalues = 0
 -- collect values into another list
 for i, argument in ipairs({...}) do
     if argument:sub(1,1) == "-" then
+        print(argument)
          pngstart = argument:sub(4,4)
-         pngend = argument:sub(6,6)
+         local i = 5
+         while argument:sub(i,i) ~= "-" and i <= string.len(argument) do
+            pngstart = pngstart .. argument:sub(i,i)
+            i = i + 1
+        end
+        pngend = argument:sub(i+1,string.len(argument))
         local recognized = false
         for j, option in ipairs(options) do
             if option[2](argument:match(option[1])) then
@@ -180,10 +186,12 @@ local accel = driver.accelerate(scene, viewport, rejected)
 if pngstart == nil then pngstart = 1 end
 if pngend == nil then pngend = 1 end
 
-for i=pngstart,pngend do
-    if i == pngstart then outputname = outputname:sub(1,string.len(outputname)-4) .. i .. outputname:sub(string.len(outputname)-3,string.len(outputname))
-    else outputname = outputname:sub(1,string.len(outputname)-5) .. i .. outputname:sub(string.len(outputname)-3,string.len(outputname)) end
+-- print("pngstart pngend: ", pngstart, pngend)
 
+for i=pngstart,pngend do
+    if i == pngstart then outputname = outputname:sub(1,1) .. i .. outputname:sub(string.len(outputname)-3,string.len(outputname))
+    else outputname = outputname:sub(1,1) .. i .. outputname:sub(string.len(outputname)-3,string.len(outputname)) end
+    -- print("Output name: ", outputname)
     local output = io.stdout
     if outputname then
         output = assert(io.open(outputname, "wb"))

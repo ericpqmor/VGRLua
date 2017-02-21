@@ -590,7 +590,7 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
   local bxmin, bymin, bxmax, bymax = unpack(bb,1,4)
   if instruction == 'linear_segment' then
     local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
-    if ind == "011" and segment_num == 14 and k == 2 then print(x0,y0,x1,y1, "is the segment I must test for: ", ind) end
+    -- if ind == "011" and segment_num == 14 and k == 2 then print(x0,y0,x1,y1, "is the segment I must test for: ", ind) end
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     --FIXME
@@ -619,10 +619,10 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
     local ymax = math.max(y0,y2)
     local ymin = math.min(y0,y2)
-    if ind == "042" then print("Must test shortcut: ", x0, y0, x1, y1, x2,y2) end
+    -- if ind == "042" then print("Must test shortcut: ", x0, y0, x1, y1, x2,y2) end
     if x2 == x0 and (x2 == xmin or x2 == xmax) then return 0 end
     if bymin < ymax and bymin >= ymin then
-      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.15) then print("Went okay for",x0,y0,x1,y1,x2,y2,ind) return util.sign(y2-y0) end
+      -- if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.15) then print("Went okay for",x0,y0,x1,y1,x2,y2,ind) return util.sign(y2-y0) end
     end
   end
 
@@ -660,7 +660,7 @@ local function WindingShortcuts(tree,ind,fatherind,shape)
   local n = #shortcuts
     for k =1, n, 4 do
       local x0,y0,x1,y1 = unpack(shortcuts, k, k+3)
-      if fatherind == "01" and ind == "011" then print(x0,y0,x1,y1,ind,fatherind, "are being tested for winding shortcuts") end
+      -- if fatherind == "01" and ind == "011" then print(x0,y0,x1,y1,ind,fatherind, "are being tested for winding shortcuts") end
       if (ymin - y0)*(ymin - y1)<0 then
       if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin + 0.05) then
         winding = winding + util.sign(y1-y0)
@@ -950,12 +950,12 @@ function fillData(scene, tree, fatherInd, ind)
         tree[ind].segments = tree[ind].segments + 1
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k)
-        if k == 1 and ind == "01" then print(ind, "got the winding number", tree[ind].winding[1], "from: ", segment_num) end
+        -- if k == 1 and ind == "01" then print(ind, "got the winding number", tree[ind].winding[1], "from: ", segment_num) end
       end
     end
     tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
   end
-  print(ind, "has the winding number", tree[ind].winding[1])
+  -- print(ind, "has the winding number", tree[ind].winding[1])
 end
 
 function testSegment(tree, ind, shape, segment_num, k)
@@ -1412,7 +1412,7 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene,tree,"0",2,100)
+    subdivide(new_scene,tree,"0",3,100)
 
    	-- UNIT TEST - TREE[IND].DATA FILLING:
     -- print("Test subdivision: ")
