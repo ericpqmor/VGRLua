@@ -483,7 +483,7 @@ local function CreateShortcuts(scene,data, bb, ind)
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
           if x1 ~= x0 then
             --and (((x1-xmax)> 0 and (y1-ymin) <= 0) or ((x0-xmax)> 0 and (y0-ymin) <= 0)) == false
-            if (xmax-x0)*(xmax-x1) <= 0 then
+            if (xmax+0.05-x0)*(xmax+0.05-x1) <= 0 then
               if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax,ymax) then
                 if util.sign(x1-x0) > 0 then
                   x0s, y0s =  x1, y1
@@ -492,7 +492,7 @@ local function CreateShortcuts(scene,data, bb, ind)
                   x0s, y0s = x0, y0
                   sobe = false
                 end
-                -- if ind == "03"
+                print(x0,y0,sobe,"was created for",ind)
                 table.insert(shortcuts[i],x0s)
                 table.insert(shortcuts[i],y0s)
                 table.insert(shortcuts[i],sobe)
@@ -506,7 +506,7 @@ local function CreateShortcuts(scene,data, bb, ind)
           local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
           if x1 ~= x0 then
             -- and (((x1-xmax)> 0 and (y1-ymin) <= 0) or ((x0-xmax)> 0 and (y0-ymin) <= 0)) == false
-            if (xmax-x0)*(xmax-x1) <= 0  then
+            if (xmax+0.05-x0)*(xmax+0.05-x1) <= 0  then
               if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax,ymax) then
                 local x0s,y0s
                 if (x1-x0) > 0 then
@@ -516,6 +516,7 @@ local function CreateShortcuts(scene,data, bb, ind)
                   x0s, y0s = x0, y0
                   sobe = false
                 end
+                print(x0,y0,sobe,"was created for",ind)
                 table.insert(shortcuts[i],x0s)
                 table.insert(shortcuts[i],y0s)
                 table.insert(shortcuts[i],sobe)
@@ -526,15 +527,17 @@ local function CreateShortcuts(scene,data, bb, ind)
         elseif scene.shapes[i].instructions[instruction] == "quadratic_segment" then
           local x0,y0,x1,y1,x2,y2 = unpack(scene.shapes[i].data,offset,offset+5)
           if x2 ~= x0 then
-            if x0 > xmax or x2 > xmax then
+            -- if x0 > xmax or x2 > xmax then
+            if (xmax-0.05-x0)*(xmax-0.05-x2) < 0 then
               if QuadraticIntersection(x0,y0,x1,y1,x2,y2,xmin,ymin,xmax,ymax) then
-                if x2-x0 > 0 then
+                if util.sign(x2-x0) > 0 then
                   x0s, y0s =  x2, y2
                   sobe = true
                 else
                   x0s, y0s = x0, y0
                   sobe = false
                 end
+                print(x0,y0,sobe,"was created for", ind)
                 table.insert(shortcuts[i],x0s)
                 table.insert(shortcuts[i],y0s)
                 table.insert(shortcuts[i],sobe)
@@ -613,7 +616,7 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local ymin = math.min(y0,y1)
     if x0 == x1 then return 0 end
     if bymin < ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin+0.15) then return util.sign(y1-y0) end
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin+0.05) then return util.sign(y1-y0) end
     end
   end
 
@@ -621,9 +624,10 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
     local ymax = math.max(y0,y2)
     local ymin = math.min(y0,y2)
+    print(x0,y0,x1,y1,x2,y2,"is being tested for",ind)
     if x2 == x0 and (x2 == xmin or x2 == xmax) then return 0 end
     if bymin < ymax and bymin >= ymin then
-      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.15) then return util.sign(y2-y0) end
+      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.05) then return util.sign(y2-y0) end
     end
   end
 
@@ -662,13 +666,6 @@ local function WindingShortcuts(tree,ind,fatherind,segment_num,shape)
     local n = #shortcuts
     for k =1, n, 4 do
       local x0,y0,sobe,father_segment = unpack(shortcuts, k, k+3)
-      -- local inside = false
-      -- for k,el in pairs(data) do
-        -- if el == father_segment then
-          -- inside = true
-          -- break
-        -- end
-      -- end
       if father_segment == segment_num then
         if ind == "032" then print(x0,y0,sobe) end
         if sobe == true then
@@ -894,7 +891,7 @@ function LineIntersect(k, segment_num, shape, xmin, ymin, xmax, ymax, ind)
       local sxmin, symin, sxmax, symax = math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)
       -- if k == 9 then print(segment_num,"is the seg:",x0,y0,x1,y1, "being tested for: ", ind) end
       if horizontal_test_linear_segment(x0,y0,x1,y1,xmin+0.05,ymin) == true and
-      horizontal_test_linear_segment(x0,y0,x1,y1,xmax+0.05,ymin) == false and
+      horizontal_test_linear_segment(x0,y0,x1,y1,xmax-0.05,ymin) == false and
       symin <= ymin and ymin < symax then
           return util.sign(y1-y0)
       end
@@ -904,14 +901,26 @@ function LineIntersect(k, segment_num, shape, xmin, ymin, xmax, ymax, ind)
       local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
       local sxmin, symin, sxmax, symax = math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)
       -- if x0 == x1 then return 0 end
-      if k == 9 and ind == "032" then print(x0,y0,x1,y1,"is being tested") end
       -- print(horizontal_test_linear_segment(x0,y0,x1,y1,xmax+0.05,ymin+0.05)) end
       if horizontal_test_linear_segment(x0,y0,x1,y1,xmin+0.05,ymin+0.05) == true and
-      horizontal_test_linear_segment(x0,y0,x1,y1,xmax+0.05,ymin+0.05) == false and
+      horizontal_test_linear_segment(x0,y0,x1,y1,xmax-0.05,ymin+0.05) == false and
       symin <= ymin and ymin < symax then
       -- if k == 9 and segment_num == 2 and ind == "031" then print(segment_num,"is the seg:",x0,y0,x1,y1, "being tested fooor: ", ind, "and it's right") print(util.sign(y1-y0))end
           -- print(symin,symax,ymin,ymax)
           return util.sign(y1-y0)
+      end
+      return 0
+    end 
+
+    if instruction == "quadratic_segment" then
+      local offset = shape.offsets[segment_num]
+      local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
+      print(x0,y0,x1,y1,x2,y2,"is being tested for",ind)
+      local sxmin, symin, sxmax, symax = math.min(x0,x2),math.min(y0,y2),math.max(x0,x2),math.max(y0,y2)
+      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmin+0.05,ymin+0.05) == true and
+         implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmax+0.05,ymin+0.05) == false and
+         symin <= ymin and ymin < symax then
+          return util.sign(y2-y0)
       end
       return 0
     end
@@ -920,12 +929,6 @@ function LineIntersect(k, segment_num, shape, xmin, ymin, xmax, ymax, ind)
       local offset = shape.offsets[segment_num]
       local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,offset,offset+7)
       return insidetest_cubic(x0,y0,x1,y1,x2,y2,x3,y3,xmin,ymin,xmax,ymax)
-    end
-
-    if instruction == "quadratic_segment" then
-      local offset = shape.offsets[segment_num]
-      local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
-      return insidetest_quadratic(x0,y0,x1,y1,x2,y2,xmin,ymin,xmax,ymax,ind)
     end
 
     if instruction == "rational_quadratic_segment" then
@@ -951,7 +954,7 @@ function fillData(scene, tree, fatherInd, ind)
         if testSegment(tree, ind, shape, segment_num,k) == true then
           tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
           tree[ind].segments = tree[ind].segments + 1
-          -- print(segment_num, "is inside of", ind)
+          print(segment_num, "is inside of", ind)
         else
           -- if ind == "031" and k == 9 then print("Got wind num",tree[ind].winding[k],"because of segment", segment_num) end
         end
@@ -1068,6 +1071,7 @@ A tree terá uma estrutura própria associada, que será explicada logo abaixo. 
 
 function LoadShortcuts(scene, tree, fatherInd, ind)
   for k in pairs(tree[fatherInd].data) do
+    tree[ind].shortcuts[k] = {}
     for index,segment_num in pairs(tree[ind].data[k]) do
       local shortcuts = tree[fatherInd].shortcuts[k]
       if shortcuts ~= nil then
@@ -1469,14 +1473,14 @@ function _M.accelerate(scene, viewport)
     subdivide(new_scene,tree,"0",1,100)
 
    	-- UNIT TEST - TREE[IND].DATA FILLING:
-    -- print("Test subdivision: ")
-    -- for i=1,#tree["03"].data do
-      -- io.write(i,": ")
-      -- for j in ipairs(tree["03"].data[i]) do
-        -- io.write(tree["03"].data[i][j], " ")
-      -- end
-      -- io.write("\n")
-    -- end
+      print("Test subdivision: ")
+      for i=1,#tree["03"].data do
+        io.write(i,": ")
+        for j in ipairs(tree["03"].data[i]) do
+          io.write(tree["03"].data[i][j], " ")
+        end
+      io.write("\n")
+      end
 
     new_scene.tree = tree
 	  return new_scene
@@ -1843,10 +1847,12 @@ local r,g,b,a = 0,0,0,0
 local rept = false
 local tree = accel.tree
 local ind = '0'
+local rec = false
+if x == 35.5 and y == 155.5 then rec = true end
 -- Iterates through the shortcut tree, finds an ind(leaf) for itself
 while tree[ind].leaf == false do
   for i = 1, 4, 1 do
-    if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
+    -- if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
     local n_ind = ind .. i
     local bb = tree[n_ind].boundingBox
     local xmin, ymin, xmax, ymax = unpack(bb)
@@ -1886,7 +1892,7 @@ for i = #tree[ind].data, 1, -1 do
       local paint = accel.paints[i]
       local wind_num = tree[ind].winding[i]
       wind_num = wind_num + wind(accel, i, ind, x, y)
-      -- if rec then print("My winding number is: ", wind_num) end
+      if rec then print("My winding number is: ", wind_num) end
       -- if rec then print("After wind is: ", wind_num) end
       if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
     		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
