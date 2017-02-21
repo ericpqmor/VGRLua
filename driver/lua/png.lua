@@ -210,7 +210,7 @@ function calculate_rational_quadratic_coefs(x0,y0,x1,y1,w1,x2,y2)
   return a,b,c,d,e,sign
 end
 
-function vertical_implicit_rational_quadratic_test(a,b,c,d,e,sign,x,y)
+function vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
   -- Observe que o teste vertical das quadráticas racionais não pré-calcula os coeficientes.
   -- Fiz isso para simplificar, já que essa função deve ser chamada apenas em pré-processamento.
   local a = (4*y1^2 - 4*w1*y1*y2 + y2^2)
@@ -233,7 +233,7 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
     --Inside the bounding box. Diagonal test
       if diagonal == true then
         if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
-          test = vertical_implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
+          test = vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,x-x0,y-y0)
         else
           test = false
         end
@@ -241,7 +241,7 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
         if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
           test = true
         else
-          test = vertical_implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
+          test = vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,x-x0,y-y0)
         end
       end
     end
@@ -459,13 +459,23 @@ local function CubicIntersection(x0,y0,x1,y1,x2,y2,x3,y3,xmin,ymin,xmax,ymax)
   end
 end
 
-local function CreateShortcuts(scene,data, bb)
+local function RationalQuadraticIntersection(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
+  local a,b,c,d,e,f,g,h,i,sign = calculate_rational_quadratic_coefs(0,0,y1/w1-y0,x1/w1-x0,1,y2-y0,x2-x0)
+  if vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymax-y0-0.05) == true and 
+    vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymin-y0+0.05) == false then
+    return true
+  else
+    return false
+  end
+end
+
+local function CreateShortcuts(scene,data, bb, ind)
   local xmin, ymin, xmax, ymax = unpack(bb)
   local shortcuts = {}
   local rec = false
   if xmin == 0 and xmax == 125 and ymin == 0 and ymax == 190.5 then rec = true end
   -- if rec then print("Fuck me") end
-  for i in ipairs(data) do
+  for i in pairs(data) do
     shortcuts[i] = {}
     if data[i] ~= nil then
       for j = 1, #data[i] do
@@ -473,15 +483,17 @@ local function CreateShortcuts(scene,data, bb)
         local offset = scene.shapes[i].offsets[instruction]
         if scene.shapes[i].instructions[instruction] == 'linear_segment' then
           local x0, y0, x1, y1 = unpack(scene.shapes[i].data, offset, offset+3)
-          print("Shortcut: ",x0,y0,x1,y1)
+          -- print("Shortcut: ",x0,y0,x1,y1, "for ", ind, "and the data: ", xmax - x0, xmax - x1)
           if x1 ~= x0 then
-            if (xmax - x0)*(xmax  - x1) < 0 and (y0-ymin)*(y1-ymin) > 0 then
+            if (xmax-x0)*(xmax-x1) <= 0 and (((x1-xmax)> 0 and (y1-ymin) <= 0) or ((x0-xmax)> 0 and (y0-ymin) <= 0)) == false then
+              -- print(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
               if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax,ymax) then
                 if util.sign(x1-x0) > 0 then
                   x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
                 else
                   x0s, y0s, x1s, y1s = x0, ymax, x0, y0
                 end
+                -- print("Created shortcut: ", x0s, y0s, x1s, y1s, "for the ind ", ind)
                 -- if rec then print("Shortcut created: ",x0s,y0s,x1s,y1s) end
                 --print("The Winding Shortcut: ",x0s,y0s,x1s,y1s)
                 table.insert(shortcuts[i],x0s)
@@ -496,7 +508,7 @@ local function CreateShortcuts(scene,data, bb)
           local begin_off = scene.shapes[i].offsets[instruction-len]
           local x1, y1 = unpack(scene.shapes[i].data, begin_off+1, begin_off+2)
           if x1 ~= x0 then
-            if x0 > xmax or x1 > xmax and (y0-ymin)*(y1-ymin) > 0 then
+            if (xmax-x0)*(xmax-x1) <= 0 and (((x1-xmax)> 0 and (y1-ymin) <= 0) or ((x0-xmax)> 0 and (y0-ymin) <= 0)) == false then
               if LinearIntersection (x0,y0,x1,y1,xmin,ymin,xmax,ymax) then
                 if (x1-x0) > 0 then
                   x0s, y0s, x1s, y1s =  x1, y1, x1, ymax
@@ -532,8 +544,25 @@ local function CreateShortcuts(scene,data, bb)
           if x3 ~= x0 then
             if x0 > xmax or x3 > xmax then
               if CubicIntersection(x0,y0,x1,y1,x2,y2,x3,y3,xmin,ymin,xmax,ymax) then
-                if x2-x0 > 0 then
+                if x3-x0 > 0 then
                   x0s, y0s, x1s, y1s = x3,y3,x3,ymax
+                else
+                  x0s, y0s, x1s, y1s = x0,ymax,x0,y0
+                end
+                table.insert(shortcuts[i],x0s)
+                table.insert(shortcuts[i], y0s)
+                table.insert(shortcuts[i], x1s)
+                table.insert(shortcuts[i], y1s)
+              end
+            end
+          end
+        elseif scene.shapes[i].instructions[instruction] == "rational_quadratic_segment" then
+          local x0,y0,x1,y1,w1,x2,y2 = unpack(scene.shapes[i].data,offset,offset+6)
+          if x2 ~= x0 then
+            if x0 > xmax or x2 > xmax then
+              if RationalQuadraticIntersection(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax) then
+                if x2-x0 > 0 then
+                  x0s, y0s, x1s, y1s = x2,y2,x2,ymax
                 else
                   x0s, y0s, x1s, y1s = x0,ymax,x0,y0
                 end
@@ -561,14 +590,15 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
   local bxmin, bymin, bxmax, bymax = unpack(bb,1,4)
   if instruction == 'linear_segment' then
     local x0,y0,x1,y1 = unpack(shape.data, offset, offset + 3)
-    if ind == "023" then print(x0,y0,x1,y1, "is the shortcut I must test for: ", ind) end
+    if ind == "011" and segment_num == 14 and k == 2 then print(x0,y0,x1,y1, "is the segment I must test for: ", ind) end
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     --FIXME
     -- x0,y0 = 119,291 and x1,y1 = 125,282
+    --For vertical lines only
     if x1 == x0 and (x1 == xmin or x1 == xmax) then return 0 end
-    if bymin <= ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax+0.05, bymin+0.05) then return util.sign(y1-y0) end
+    if bymin < ymax and bymin >= ymin then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin+0.05) then return util.sign(y1-y0) end
     end
   end
 
@@ -576,12 +606,12 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local x0,y0,len = unpack(shape.data, offset, offset+2)
     local offset_begin = shape.offsets[segment_num - len]
     local x1,y1 = unpack(shape.data, offset_begin+1, offset_begin+2)
-    if ind == "023" then print(x0,y0,x1,y1, "is the shortcut I must test for the bounding box: ", bxmin, bymin, bxmax, bymax) end
+    -- if ind == "011" then print(x0,y0,x1,y1, "is the shortcut I must test for the bounding box: ", bxmin, bymin, bxmax, bymax) end
     local ymax = math.max(y0,y1)
     local ymin = math.min(y0,y1)
     if x0 == x1 then return 0 end
-    if bymin <= ymax and bymin >= ymin then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin) then return util.sign(y1-y0) end
+    if bymin < ymax and bymin >= ymin then
+      if horizontal_test_linear_segment(x0,y0, x1, y1, bxmax, bymin+0.15) then return util.sign(y1-y0) end
     end
   end
 
@@ -589,11 +619,10 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
     local ymax = math.max(y0,y2)
     local ymin = math.min(y0,y2)
-    -- if ind == "02" then print("Must test shortcut: ", x0, y0, x1, y1, x2,y2) end
-
+    if ind == "042" then print("Must test shortcut: ", x0, y0, x1, y1, x2,y2) end
     if x2 == x0 and (x2 == xmin or x2 == xmax) then return 0 end
-    if bymin <= ymax and bymin >= ymin then
-      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin) then return util.sign(y2-y0) end
+    if bymin < ymax and bymin >= ymin then
+      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.15) then print("Went okay for",x0,y0,x1,y1,x2,y2,ind) return util.sign(y2-y0) end
     end
   end
 
@@ -603,10 +632,21 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local ymin = math.min(y0,y3)
     -- if ind == "03" then print(x0,y0,x1,y1,x2,y2,x3,y3) end
     if x3 == x0 and (x3 == xmin or x3 == xmax) then return 0 end
-    if bymin <= ymax and bymin >= ymin then
+    if bymin < ymax and bymin >= ymin then
       local a,b,c,d,e,f,g,h,i,sign = calculate_cubic_coefs(x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0)
       if horizontal_implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,bxmax-x0,bymin-y0) then return util.sign(y3-y0) end
     end    
+  end
+
+  if instruction == 'rational_quadratic_segment' then
+    local x0,y0,x1,y1,w1,x2,y2 = unpack(shape.data,offset,offset+6)
+    local ymax = math.max(y0,y2)
+    local ymin = math.min(y0,y2)
+    if x2 == x0 and (x2 == xmin or x2 == xmax) then return 0 end
+    if bymin < ymax and bymin >= ymin then
+      local a,b,c,d,e,sign = calculate_rational_quadratic_coefs(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0)
+      if horizontal_implicit_rational_quadratic_test(a,b,c,d,e,sign,bxmax-x0,bymin-y0) then return util.sign(y2-y0) end
+    end
   end
 
   return 0
@@ -617,9 +657,10 @@ local function WindingShortcuts(tree,ind,fatherind,shape)
   local shortcuts = tree[fatherind].shortcuts[shape]
   local xmin, ymin, xmax, ymax = unpack(tree[ind].boundingBox)
   if shortcuts ~= nil then
-    local n = #shortcuts
+  local n = #shortcuts
     for k =1, n, 4 do
       local x0,y0,x1,y1 = unpack(shortcuts, k, k+3)
+      if fatherind == "01" and ind == "011" then print(x0,y0,x1,y1,ind,fatherind, "are being tested for winding shortcuts") end
       if (ymin - y0)*(ymin - y1)<0 then
       if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin + 0.05) then
         winding = winding + util.sign(y1-y0)
@@ -859,6 +900,45 @@ function insidetest_cubic(x0,y0,x1,y1,x2,y2,x3,y3,xmin,ymin,xmax,ymax)
   end
 end
 
+function insidetest_rationalquadratic(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
+  local xm,ym = bezier.at2r(1/2,x0,y0,1,x1,y1,w1,x2,y2,1)
+  local rec = false
+  if xmin == 0 and xmax == 100 and ymin == 100 and ymax == 200 then rec = true end
+  if x0 == x2 and (x2 == xmax or x2 == xmin) then return false end
+  if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x2 and x2<xmax and ymin<y2 and y2<ymax) or
+    (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
+    return true
+  else
+   -- print(x0,y0,x1,y1,w1,x2,y2)
+   local sxmin, symin, sxmax, symax = math.min(x0,x2),math.min(y0,y2),math.max(x0,x2),math.max(y0,y2)
+   local ah,bh,ch,dh,eh,signh = calculate_rational_quadratic_coefs(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0)
+   -- local av,bv,cv,dv,ev,signv = calculate_rational_quadratic_coefs(0,0,y1/w1-y0,x1/w1-x0,1,y2-y0,x2-x0)
+   --print(sxmin, symin, sxmax, symax, "bseaowj")
+   -- print(xmax-x0,ymax-y0-0.05)
+    if vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymax-y0-0.05) == true and
+       vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymin-y0+0.05) == false and
+       sxmin <= xmax and xmax <= symax then
+           --print("Rect: ", x0,y0,x1,y1)
+          return true
+    end
+    if vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmin-x0,ymax-y0-0.05) == true and
+      vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmin-x0,ymin-y0+0.05) == false and
+      sxmin <= xmin and xmin <= sxmax then
+          return true
+    end
+    if horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmin-x0-0.05,ymin-y0) == true and
+      horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmax-x0-0.05,ymin-y0) == false and
+      symin <= ymin and ymin <= symax then
+          return true
+    end
+    if horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmin-x0+0.05,ymax-y0) == true and
+      horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmax-x0-0.05,ymax-y0) == false and
+      symin <= ymax and ymax <= symax then
+          return true
+    end
+  end
+end
+
 function fillData(scene, tree, fatherInd, ind)
   for k in pairs(tree[fatherInd].data) do
     local shape = scene.shapes[k]
@@ -870,7 +950,7 @@ function fillData(scene, tree, fatherInd, ind)
         tree[ind].segments = tree[ind].segments + 1
       else
         tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k)
-        print(ind, "got the winding number", tree[ind].winding[1])
+        if k == 1 and ind == "01" then print(ind, "got the winding number", tree[ind].winding[1], "from: ", segment_num) end
       end
     end
     tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
@@ -894,13 +974,18 @@ function testSegment(tree, ind, shape, segment_num, k)
       local x0,y0,len = unpack(shape.data, offset, offset+2)
       local offset_begin = shape.offsets[segment_num - len]
       local xclose, yclose = unpack(shape.data, offset_begin+1, offset_begin+2)
-
+      -- print("Testing if segment", x0,y0,xclose,yclose, "is inside of", ind, segment_num)
       return insidetest_linear(x0,y0,xclose,yclose,xmin,ymin,xmax,ymax)
     end
 
     if instruction == "linear_segment" then
       local x0,y0,x1,y1 = unpack(shape.data,offset,offset+3)
-      return insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
+      -- print("Testing if segment", x0,y0,x1,y1, "is inside of", ind, segment_num)
+      if insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax) then return true
+      else
+        -- print("Segment",x0,y0,x1,y1, segment_num,"is outside of", ind)
+        return false
+      end
     end
 
     if instruction == "cubic_segment" then
@@ -956,12 +1041,13 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
     --Criação de bounding boxes
     local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
     tree[ind].boundingBox = {xmin,ymin,xmax,ymax}
+    -- if ind == "011" then print(xmin,ymin,xmax,ymax,"is the bb") end
 
     tree[ind].depth = tree[fatherInd].depth + 1
     tree[ind].segments = 0
 
     fillData(scene, tree, fatherInd, ind) -- aqui adiciona os dados, aparentemente é onde precisa de debug
-    tree[ind].shortcuts = CreateShortcuts(scene, tree[ind].data, tree[ind].boundingBox)
+    tree[ind].shortcuts = CreateShortcuts(scene, tree[ind].data, tree[ind].boundingBox, ind)
      -- for k, el in pairs(tree[ind].data) do
        -- tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, ind, k)
      --end
@@ -1220,7 +1306,7 @@ function _M.accelerate(scene, viewport)
 				self.diagonal[#self.diagonal+1] = horizontal_test_linear_segment(x0,y0,x2,y2,x1,y1)
 				--Implicitization
 				self.winding[#self.winding+1] =
-				function(x,y,winding_rule,count)
+				function(x0,y0,x1,y1,x2,y2,x,y,winding_rule,count)
 					local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 					local diagonal = self.diagonal[count]
 					return applyWindingNumber(horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal),winding_rule,y0,y2)
@@ -1246,7 +1332,7 @@ function _M.accelerate(scene, viewport)
 				self.coef[#self.coef+1] = {a,b,c,d,e,sign}
 
 				self.winding[#self.winding+1] =
-				function(x,y,winding_rule,count)
+				function(x0,y0,x1,y1,w1,x2,y2,x,y,winding_rule,count)
 					local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
 					return applyWindingNumber(horizontal_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,self.coef[count],xmin,ymin,xmax,ymax,self.diagonal[count]),winding_rule,y0,y2)
 				end
@@ -1632,12 +1718,17 @@ function wind(accel, i, data, x, y)
   	elseif instruction == "quadratic_segment" then
       local x0,y0,x1,y1,x2,y2 = unpack(path.data,offset,offset+5)
       -- if rec then print("Testing against: ", x0, y0, x1, y1, x2, y2) end
-      if path.winding[seg] ~= nil then wind_num = wind_num + path.winding[seg](x,y,element.winding_rule,seg) end
+      if path.winding[seg] ~= nil then wind_num = wind_num + path.winding[seg](x0,y0,x1,y1,x2,y2,x,y,element.winding_rule,seg) end
 
     elseif instruction == "cubic_segment" then
       local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(path.data,offset,offset+7)
-      wind_num = wind_num + path.winding[seg](x0,y0,x1,y1,x2,y2,x3,y3,x,y,element.winding_rule,seg)
+      if path.winding[seg] ~= nil then wind_num = wind_num + path.winding[seg](x0,y0,x1,y1,x2,y2,x3,y3,x,y,element.winding_rule,seg) end
+    
+    elseif instruction == "rational_quadratic_segment" then
+      local x0,y0,x1,y1,w1,x2,y2 = unpack(path.data,offset,offset+6)
+      if path.winding[seg] ~= nil then wind_num = wind_num + path.winding[seg](x0,y0,x1,y1,w1,x2,y2,x,y,element.winding_rule,seg) end
     end
+
   end
   -- if rec then print("\n") end
 	return wind_num
@@ -1686,7 +1777,7 @@ local rec = false
 if x == 15.5 and y == 45.5 then rec = true end
 local tree = accel.tree
 local ind = '0'
-local xmin,ymin,xmax,ymax = unpack(tree["01"].boundingBox)
+-- local xmin,ymin,xmax,ymax = unpack(tree["0"].boundingBox)
 --print("asidohasodhaso:", xmin,ymin,xmax,ymax)
 -- encontra uma folha
 while tree[ind].leaf == false do
@@ -1701,6 +1792,22 @@ while tree[ind].leaf == false do
     end
   end
 end
+
+local shortcuts = tree["04"].shortcuts[1]
+-- print("Num of shortcuts of 01: ", #shortcuts/4)
+local wind_shorcut = 0
+if shortcuts ~= nil then
+for data = 1, #shortcuts, 4 do
+    local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
+    -- print(x0,y0,x1,y1, "shortcut for 01")
+    if math.abs(x0-x) < 1 and math.min(y0,y1) <= y and y <= math.max(y0,y1) then return 0,255,0,1 end
+    --print(valor)
+    -- if  -2 < valor and valor < 2 then return 0,1,0,1 end
+end
+end
+
+
+
 -- if rec then print("My ind is: ", ind) end
 -- dentro da folha itera nos shapes
 for i = #tree[ind].data, 1, -1 do
