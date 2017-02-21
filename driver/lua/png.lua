@@ -619,10 +619,9 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
     local ymax = math.max(y0,y2)
     local ymin = math.min(y0,y2)
-    -- if ind == "042" then print("Must test shortcut: ", x0, y0, x1, y1, x2,y2) end
     if x2 == x0 and (x2 == xmin or x2 == xmax) then return 0 end
     if bymin < ymax and bymin >= ymin then
-      -- if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.15) then print("Went okay for",x0,y0,x1,y1,x2,y2,ind) return util.sign(y2-y0) end
+      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,bxmax,bymin+0.15) then print("Went okay for",x0,y0,x1,y1,x2,y2,ind) return util.sign(y2-y0) end
     end
   end
 
@@ -657,14 +656,11 @@ local function WindingShortcuts(tree,ind,fatherind,shape)
   local shortcuts = tree[fatherind].shortcuts[shape]
   local xmin, ymin, xmax, ymax = unpack(tree[ind].boundingBox)
   if shortcuts ~= nil then
-  local n = #shortcuts
+    local n = #shortcuts
     for k =1, n, 4 do
       local x0,y0,x1,y1 = unpack(shortcuts, k, k+3)
-      -- if fatherind == "01" and ind == "011" then print(x0,y0,x1,y1,ind,fatherind, "are being tested for winding shortcuts") end
-      if (ymin - y0)*(ymin - y1)<0 then
-      if horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin + 0.05) then
+      if (ymin - y0)*(ymin - y1)<0 and horizontal_test_linear_segment(x0,y0, x1, y1, xmax, ymin + 0.05) then
         winding = winding + util.sign(y1-y0)
-      end
       end
     end
   end
@@ -725,8 +721,6 @@ end
 
 function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
   local xm,ym = (x0+x1)/2,(y0+y1)/2
-  local rec = false
-  if xmin == 0 and xmax == 100 and ymin == 100 and ymax == 200 then rec = true end
   -- if y0 == y1 and (x1 == xmax or x1 == xmin) then return false end
   if x0 == x1 and (x1 <= xmax) and y0 ~= y1 then return true end
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) or
@@ -755,94 +749,19 @@ function insidetest_linear(x0,y0,x1,y1,xmin,ymin,xmax,ymax)
           return true
     end
   end
-
-    --if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then return true end
-     -- if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then return true end
-     -- if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then return true end
-   -- if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then return true end
-   --[[
-  local epsilon = 0.005
-  local xmax = xmax - epsilon
-  if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x1 and x1<xmax and ymin<y1 and y1<ymax) then
-    return true
-  else
-    local edge_number = 0
-    local point_number = 0
-    intersect = 0
-    intersect_p = 0
-    if vertical_linear_test(x0,y0,x1,y1,xmax,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      vertical_linear_test(x0,y0,x1,y1,xmax,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-      edge_number = edge_number + 1
-      intersect = 1
-    end
-    if vertical_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      vertical_linear_test(x0,y0,x1,y1,xmin,ymin+epsilon,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-      edge_number = edge_number + 1
-      intersect = 2
-    end
-    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymin,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-      edge_number = edge_number + 1
-      intersect = 3
-    end
-    if horizontal_linear_test(x0,y0,x1,y1,xmin,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == true and
-      horizontal_linear_test(x0,y0,x1,y1,xmax-epsilon,ymax,math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(y0,y1)) == false then
-      edge_number = edge_number + 1
-      intersect = 4
-    end
-    if (y1-y0)*xmin+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymin) then point_number = point_number + 1 intersect_p = 3 end
-    if (y1-y0)*xmax+(x0-x1)*ymin-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymin) then point_number = point_number + 1 intersect_p = 2 end
-    if (y1-y0)*xmin+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmin,ymax) then point_number = point_number + 1 intersect_p = 4 end
-    if (y1-y0)*xmax+(x0-x1)*ymax-x0*(y1-y0)-y0*(x0-x1) == 0 and insideBoundingBox(math.min(x0,x1),math.min(y0,y1),math.max(x0,x1),math.max(x0,x1),xmax,ymax) then point_number = point_number + 1 intersect_p = 1 end
-    if edge_number == 2 then
-      return true
-    elseif edge_number == 1 then
-      if (x0 == x1 and x1 == xmax and min(y0,y1) == ymin and max(y0,y1) == ymax and intersect == 1) then
-        return true
-      elseif (x0 == x1 and x1 == xmax and min(y0,y1)==ymin and max(y0,y1)==ymax and intersect == 2) or
-           (y0 == y1 and y1 == ymin and min(x0,x1)==xmin and max(x0,x1)==xmax and intersect == 3) or
-           (y0 == y1 and y1 == ymax and min(x0,x1)==xmin and max(x0,x1)==xmax and intersect == 4) then
-        return false
-      else
-        if point_number == 1 then
-          if (intersect == 1 and (intersect_p==1 or intersect_p==2)) or (intersect == 2 and (intersect_p==3 or intersect_p==4)) or
-             (intersect == 3 and (intersect_p==2 or intersect_p==3)) or (intersect == 4 and (intersect_p==1 or intersect_p==4)) then
-             return true
-          else
-            if intersect_p <= 2 then return true
-            else return false end
-          end
-        end
-      end
-    else
-      if point_number == 1 then
-        if intersect_p <= 2 then return true
-        else return false end
-      elseif point_number == 2 then
-        return true
-      else
-        return false
-      end
-    end
-  end
-  ]]--
 end
 
 function insidetest_quadratic(x0,y0,x1,y1,x2,y2,xmin,ymin,xmax,ymax)
   local xm,ym = bezier.at2(1/2,x0,y0,x1,y1,x2,y2)
-  local rec = false
-  if xmin == 0 and xmax == 100 and ymin == 100 and ymax == 200 then rec = true end
   if x0 == x2 and (x2 == xmax or x2 == xmin) then return false end
   if (xmin<x0 and x0<xmax and ymin<y0 and y0<ymax) or (xmin<x2 and x2<xmax and ymin<y2 and y2<ymax) or
     (xmin<xm and xm<xmax and ymin<ym and ym<ymax) then
     return true
   else
    local sxmin, symin, sxmax, symax = math.min(x0,x2),math.min(y0,y2),math.max(x0,x2),math.max(y0,y2) 
-   --print(sxmin, symin, sxmax, symax, "bseaowj")
     if implicit_vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmax,ymax-0.05) == true and
        implicit_vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmax,ymin+0.05) == false and
        sxmin <= xmax and xmax <= symax then
-           --print("Rect: ", x0,y0,x1,y1)
           return true
     end
     if implicit_vertical_quadratic_test(x0,y0,x1,y1,x2,y2,xmin,ymax-0.05) == true and
@@ -939,21 +858,24 @@ function insidetest_rationalquadratic(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
   end
 end
 
+
+
 function fillData(scene, tree, fatherInd, ind)
   for k in pairs(tree[fatherInd].data) do
     local shape = scene.shapes[k]
     tree[ind].data[k] = {}
     tree[ind].winding[k] = tree[fatherInd].winding[k]
+
     for index,segment_num in pairs(tree[fatherInd].data[k]) do
       if testSegment(tree, ind, shape, segment_num,k) == true then
         tree[ind].data[k][#tree[ind].data[k] + 1] = segment_num
         tree[ind].segments = tree[ind].segments + 1
       else
-        tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k)
+        if ind ~= fatherInd .. "4" then tree[ind].winding[k] = tree[ind].winding[k] + WindingIncrement(tree, ind, shape, segment_num, k) end
         -- if k == 1 and ind == "01" then print(ind, "got the winding number", tree[ind].winding[1], "from: ", segment_num) end
       end
     end
-    tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k)
+    if ind ~= fatherInd .. "4" then tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, fatherInd, k) end
   end
   -- print(ind, "has the winding number", tree[ind].winding[1])
 end
@@ -1041,16 +963,12 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
     --Criação de bounding boxes
     local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
     tree[ind].boundingBox = {xmin,ymin,xmax,ymax}
-    -- if ind == "011" then print(xmin,ymin,xmax,ymax,"is the bb") end
 
     tree[ind].depth = tree[fatherInd].depth + 1
     tree[ind].segments = 0
 
-    fillData(scene, tree, fatherInd, ind) -- aqui adiciona os dados, aparentemente é onde precisa de debug
+    fillData(scene, tree, fatherInd, ind)
     tree[ind].shortcuts = CreateShortcuts(scene, tree[ind].data, tree[ind].boundingBox, ind)
-     -- for k, el in pairs(tree[ind].data) do
-       -- tree[ind].winding[k] = tree[ind].winding[k] + WindingShortcuts(tree, ind, ind, k)
-     --end
       if isLeaf(tree, ind, maxdepth, maxseg) == true then
       tree[ind].leaf = true
     else
@@ -1202,7 +1120,6 @@ function _M.accelerate(scene, viewport)
 				self.winding[#self.winding + 1] =
 					function(x0,y0,x1,y1,x,y,winding_rule,count)
 						local xmin, ymin, xmax, ymax = unpack(self.bound[count],1,4)
-            -- print(x0,y0,xclose,yclose, "is testing")
 						return applyWindingNumber(horizontal_linear_test(x0,y0,x1,y1,x,y,xmin,ymin,xmax,ymax),winding_rule,y0,yclose)
 					end
 			end
@@ -1412,7 +1329,7 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene,tree,"0",3,100)
+    subdivide(new_scene,tree,"0",2,100)
 
    	-- UNIT TEST - TREE[IND].DATA FILLING:
     -- print("Test subdivision: ")
@@ -1733,9 +1650,9 @@ function wind(accel, i, data, x, y)
   -- if rec then print("\n") end
 	return wind_num
 end
+
 local function windshortcuts(accel,ind, i, x, y)
   local tree = accel.tree
-  -- if x == 35.5 and y == 65.5 then print(ind) end
   local shortcuts = tree[ind].shortcuts[i]
   local wind_shorcut = 0
   if shortcuts ~= nil then
@@ -1755,7 +1672,6 @@ local function windshortcuts(accel,ind, i, x, y)
   return wind_shorcut
 end
 
-
 function painting(accel,paint,x,y,r,g,b,a)
 	local rx, gx, bx, ax
 	if paint.type == "linear_gradient" then rx, gx, bx, ax = linear_gradient(accel,x,y,paint)
@@ -1767,72 +1683,68 @@ function painting(accel,paint,x,y,r,g,b,a)
 	return r,g,b,a
 end
 
+function findInd(tree,x,y)
+  local ind = '0'
+  -- Iterates through the shortcut tree, finds an ind for itself
+  while tree[ind].leaf == false do
+    for i = 1, 4, 1 do
+      if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
+      local n_ind = ind .. i
+      local bb = tree[n_ind].boundingBox
+      local xmin, ymin, xmax, ymax = unpack(bb)
+      if insideBoundingBox(xmin, ymin, xmax, ymax, x, y) then
+        ind = n_ind
+        break
+      end
+    end
+  end
+end
+
 --  This is the other function you have to implement.
 --  It receives the acceleration datastructure and a sampling
 --  position. It returns the color at that position.
 local function sample(accel, x, y, path_num)
-local r,g,b,a = 0,0,0,0
-local rept = false
-local rec = false
-if x == 15.5 and y == 45.5 then rec = true end
-local tree = accel.tree
-local ind = '0'
--- local xmin,ymin,xmax,ymax = unpack(tree["0"].boundingBox)
---print("asidohasodhaso:", xmin,ymin,xmax,ymax)
--- encontra uma folha
-while tree[ind].leaf == false do
-  for i = 1, 4, 1 do
-    if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
-    local n_ind = ind .. i
-    local bb = tree[n_ind].boundingBox
-    local xmin, ymin, xmax, ymax = unpack(bb)
-    if insideBoundingBox(xmin, ymin, xmax, ymax, x, y) then
-      ind = n_ind
-      break
+  local r,g,b,a = 0,0,0,0
+  local rept = false
+  local tree = accel.tree
+  local ind = findInd(tree,x,y)
+  local shortcuts = tree["04"].shortcuts[1]
+  -- print("Num of shortcuts of 01: ", #shortcuts/4)
+  local wind_shorcut = 0
+  if shortcuts ~= nil then
+    for data = 1, #shortcuts, 4 do
+        local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
+        -- print(x0,y0,x1,y1, "shortcut for 01")
+        if math.abs(x0-x) < 1 and math.min(y0,y1) <= y and y <= math.max(y0,y1) then return 0,255,0,1 end
+        --print(valor)
+        -- if  -2 < valor and valor < 2 then return 0,1,0,1 end
     end
   end
-end
-
-local shortcuts = tree["04"].shortcuts[1]
--- print("Num of shortcuts of 01: ", #shortcuts/4)
-local wind_shorcut = 0
-if shortcuts ~= nil then
-for data = 1, #shortcuts, 4 do
-    local x0, y0, x1, y1 = unpack(shortcuts, data, data + 3)
-    -- print(x0,y0,x1,y1, "shortcut for 01")
-    if math.abs(x0-x) < 1 and math.min(y0,y1) <= y and y <= math.max(y0,y1) then return 0,255,0,1 end
-    --print(valor)
-    -- if  -2 < valor and valor < 2 then return 0,1,0,1 end
-end
-end
-
-
-
--- if rec then print("My ind is: ", ind) end
--- dentro da folha itera nos shapes
-for i = #tree[ind].data, 1, -1 do
-  if path_num == nil or (path_num > 0 and i == path_num) then
-    local j = tree[ind].data[i]
-    if j ~= nil then
-      local element = accel.elements[i]
-      local shape = accel.shapes[i]
-      local paint = accel.paints[i]
-      local wind_num = tree[ind].winding[i]
-      wind_num = wind_num + wind(accel, i, tree[ind].data, x, y)
-      -- if rec then print("My winding number is: ", wind_num) end
-      wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
-      -- if rec then print("After wind is: ", wind_num) end
-      if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
-    		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
-    	end
-    	if util.is_almost_one(a) then
-    		return r,g,b,a
-    	end
+  -- if rec then print("My ind is: ", ind) end
+  -- dentro da folha itera nos shapes
+  for i = #tree[ind].data, 1, -1 do
+    if path_num == nil or (path_num > 0 and i == path_num) then
+      local j = tree[ind].data[i]
+      if j ~= nil then
+        local element = accel.elements[i]
+        local shape = accel.shapes[i]
+        local paint = accel.paints[i]
+        local wind_num = tree[ind].winding[i]
+        wind_num = wind_num + wind(accel, i, tree[ind].data, x, y)
+        -- if rec then print("My winding number is: ", wind_num) end
+        wind_num = wind_num + windshortcuts(accel, ind, i, x, y)
+        -- if rec then print("After wind is: ", wind_num) end
+        if (element.winding_rule == "odd" and wind_num%2 == 1) or (element.winding_rule == "non-zero" and wind_num ~= 0) then
+      		r,g,b,a = painting(accel,paint,x,y,r,g,b,a)
+      	end
+      	if util.is_almost_one(a) then
+      		return r,g,b,a
+      	end
+      end
     end
   end
-end
 
-return blend(1, 1, 1, 1, r, g, b, a)
+  return blend(1, 1, 1, 1, r, g, b, a)
 end
 
 
@@ -1874,13 +1786,13 @@ local function supersample(accel, pattern, x, y, path_num, kernel)
     end
     local W = 0
     for i=1, #pattern-1,2 do
-	local w_i = kernel(pattern[i], pattern[i+1])
+	    local w_i = kernel(pattern[i], pattern[i+1])
     	local rx,gx,bx,ax = sample(accel,x+pattern[i],y+pattern[i+1], path_num)
      	sr = sr + w_i*rx^(1/2.2)
     	sg = sg + w_i*gx^(1/2.2)
     	sb = sb + w_i*bx^(1/2.2)
     	sa = sa + w_i*ax^(1/2.2)
-	W = W + w_i
+	    W = W + w_i
     end
 
     return gamma_correction(sr,sg,sb,sa,W)
