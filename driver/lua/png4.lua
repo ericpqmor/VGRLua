@@ -1892,7 +1892,7 @@ if x == 35.5 and y == 155.5 then return 0,255,0,1 end
 -- Iterates through the shortcut tree, finds an ind(leaf) for itself
 while tree[ind].leaf == false do
   for i = 1, 4, 1 do
-    -- if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
+    if InsideGrid(tree, ind, x, y) then return 0,0,0,1 end
     local n_ind = ind .. i
     local bb = tree[n_ind].boundingBox
     local xmin, ymin, xmax, ymax = unpack(bb)
