@@ -1019,6 +1019,13 @@ function LoadShortcuts(scene, tree, fatherInd, ind)
     end
   end
 end
+local function CleanFather(tree, fatherInd)
+  -- for k = 1 , #tree[fatherInd].data do
+  tree[fatherInd].data = {}
+  tree[fatherInd].shortcuts = {}
+  tree[fatherInd].segments = 0
+-- end
+end
 
 function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
   for i=4,1,-1 do
@@ -1033,20 +1040,18 @@ function subdivide(scene, tree, fatherInd, maxdepth, maxseg)
     --Criação de bounding boxes
     local xmin,ymin,xmax,ymax = createBoundingBox(tree[fatherInd].boundingBox, i)
     tree[ind].boundingBox = {xmin,ymin,xmax,ymax}
-
     tree[ind].depth = tree[fatherInd].depth + 1
-    if tree[ind].depth > 4 then
-    -- print(ind, tree[ind].depth, 'father segments_num', tree[fatherInd].segments)
-  end
     tree[ind].segments = 0
 
     fillData(scene, tree, fatherInd, ind) -- FUTURE OPTIMIZATION: SAME LOOP
     tree[ind].shortcuts, number = CreateShortcuts(scene, tree[ind].data, tree[ind].boundingBox, ind)
     tree[ind].segments = tree[ind].segments + number
-      if isLeaf(tree, ind, maxdepth, maxseg) == true then
+    if i == 1 then CleanFather(tree, fatherInd) end
+    if isLeaf(tree, ind, maxdepth, maxseg) == true then
       tree[ind].leaf = true
     else
       tree[ind].leaf = false
+
       subdivide(scene, tree, ind, maxdepth, maxseg)
     end
   end
@@ -1401,7 +1406,7 @@ function _M.accelerate(scene, viewport)
     end
 
     local tree = initializeTree(new_scene, viewport)
-    subdivide(new_scene,tree,"0",6,10)
+    subdivide(new_scene,tree,"0",7,20)
 
    	-- UNIT TEST - TREE[IND].DATA FILLING:
     -- print("Test subdivision: ")
