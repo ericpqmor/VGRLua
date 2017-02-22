@@ -213,12 +213,12 @@ end
 function vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
   -- Observe que o teste vertical das quadráticas racionais não pré-calcula os coeficientes.
   -- Fiz isso para simplificar, já que essa função deve ser chamada apenas em pré-processamento.
+  local sign = 2*y2*(-x2*y1 + x1*y2)
   local a = (4*y1^2 - 4*w1*y1*y2 + y2^2)
   local b = 4*y1*y2*x1 - 4*y1^2*x2
   local c = -4*y2*x1^2 + 4*y1*x1*x2
   local d = -8*y1*x1 + 4*w1*y2*x1 + 4*w1*y1*x2 - 2*y2*x2
   local e = (4*x1^2 - 4*w1*x1*x2 + x2^2)
-  local sign = 2*x2*(-y2*x1 + y1*x2)
   local valor = x*(a*x + b) + y*(c + x*d + y*e)
   return valor*sign > 0
 end
@@ -250,9 +250,22 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
   return test
 end
 
-function horizontal_implicit_rational_quadratic_test(a,b,c,d,e,sign,x,y)
-	local valor =y*(a*y + b) + x*(c + y*d + x*e)
-	return valor*sign < 0
+function horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w,x2,y2,x,y)
+  local px0 = x0 - x
+  local px1 = x1 - w*x
+  local px2 = x2 - x
+  local py0 = y0 - y
+  local py1 = y1 - w*y
+  local py2 = y2 - y
+    local sign = 2*(x2-x0)*(-(y2-y0)*(x1-x0) + (y1-y0)*(x2-x0))
+  local u0 = px0
+  local u1 = 2*(px1 - px0)
+  local u2 = px0 - 2*px1 + px2
+  local v0 = py0
+  local v1 = 2*(py1 - py0)
+  local v2 = py0 - 2*py1 + py2
+  local r = -util.det2(u1*v0 - u0*v1, u2*v0 - u0*v2, u2*v0 - u0*v2, u2*v1 - u1*v2)
+  return sign*r <0
 end
 
 function horizontal_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ymin,xmax,ymax,diagonal)
@@ -267,7 +280,7 @@ function horizontal_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,
 		--Inside the bounding box. Diagonal test
 			if diagonal == true then
 				if horizontal_test_linear_segment(x0,y0,x2,y2,x,y) == true then
-					test = horizontal_implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
+					test = horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
 				else
 					test = false
 				end
@@ -275,7 +288,7 @@ function horizontal_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,
 				if horizontal_test_linear_segment(x0,y0,x2,y2,x,y) == true then
 					test = true
 				else
-					test = horizontal_implicit_rational_quadratic_test(a,b,c,d,e,sign,x-x0,y-y0)
+					test = horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
 				end
 			end
 		end
@@ -469,6 +482,25 @@ local function RationalQuadraticIntersection(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax
   end
 end
 
+--CORRECT LOGIC--
+--[[
+local function shortcut(segment, cell)
+  local dir = segment:winding(cell.x2,cell.y2+EPS,true)
+  if (((dir~=0 and segment:winding(cell.x3, cell.y3, true)==0) or 
+  (util.is_almost_equal(cell.x3,segment.x0) and util.is_almost_equal(cell.y3, segment.y0))) then
+    if(segment.dirx > 0) then
+      y = segment.yf
+      x = segment.xf
+    else
+      y = segment.y0
+      x = segment.x0
+    end
+    return segment.dirx, x, y
+  else
+    return false
+  end
+end
+]]--
 local function CreateShortcuts(scene,data, bb, ind)
   local xmin, ymin, xmax, ymax = unpack(bb)
   local shortcuts = {}
@@ -649,7 +681,7 @@ local function WindingIncrement(tree, ind, shape, segment_num, k)
     if x2 == x0 and (x2 == xmin or x2 == xmax) then return 0 end
     if bymin < ymax and bymin >= ymin then
       local a,b,c,d,e,sign = calculate_rational_quadratic_coefs(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0)
-      if horizontal_implicit_rational_quadratic_test(a,b,c,d,e,sign,bxmax-x0,bymin-y0) then return util.sign(y2-y0) end
+      if horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,bxmax,bymin) then return util.sign(y2-y0) end
     end
   end
 
@@ -862,13 +894,13 @@ function insidetest_rationalquadratic(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
       sxmin <= xmin and xmin <= sxmax then
           return true
     end
-    if horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmin-x0-0.05,ymin-y0) == true and
-      horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmax-x0-0.05,ymin-y0) == false and
+    if horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmin-0.05,ymin) == true and
+      horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax-0.05,ymin) == false and
       symin <= ymin and ymin <= symax then
           return true
     end
-    if horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmin-x0+0.05,ymax-y0) == true and
-      horizontal_implicit_rational_quadratic_test(ah,bh,ch,dh,eh,signh,xmax-x0-0.05,ymax-y0) == false and
+    if horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmin+0.05,ymax-y0) == true and
+      horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax-0.05,ymax-y0) == false and
       symin <= ymax and ymax <= symax then
           return true
     end
@@ -915,10 +947,10 @@ function LineIntersect(k, segment_num, shape, xmin, ymin, xmax, ymax, ind)
     if instruction == "quadratic_segment" then
       local offset = shape.offsets[segment_num]
       local x0,y0,x1,y1,x2,y2 = unpack(shape.data,offset,offset+5)
-      print(x0,y0,x1,y1,x2,y2,"is being tested for",ind)
       local sxmin, symin, sxmax, symax = math.min(x0,x2),math.min(y0,y2),math.max(x0,x2),math.max(y0,y2)
-      if implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmin+0.05,ymin+0.05) == true and
-         implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmax+0.05,ymin+0.05) == false and
+
+      if horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmin+0.05,ymin+0.05,xmin,ymin,xmax,ymax) == true and
+         horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,xmax+0.05,ymin+0.05,xmin,ymin,xmax,ymax) == false and
          symin <= ymin and ymin < symax then
           return util.sign(y2-y0)
       end
@@ -928,13 +960,25 @@ function LineIntersect(k, segment_num, shape, xmin, ymin, xmax, ymax, ind)
     if instruction == "cubic_segment" then
       local offset = shape.offsets[segment_num]
       local x0,y0,x1,y1,x2,y2,x3,y3 = unpack(shape.data,offset,offset+7)
-      return insidetest_cubic(x0,y0,x1,y1,x2,y2,x3,y3,xmin,ymin,xmax,ymax)
+      local sxmin,symin,sxmax,symax = math.min(x0,x3),math.min(y0,y3),math.max(x0,x3),math.max(y0,y3)
+      local a,b,c,d,e,f,g,h,i,sign = calculate_cubic_coefs(x1-x0,y1-y0,x2-x0,y2-y0,x3-x0,y3-y0)
+      if horizontal_implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,xmin-x0-0.05,ymin-y0) == true and
+         horizontal_implicit_cubic_test(a,b,c,d,e,f,g,h,i,sign,xmax+0.05-x0,ymin+0.05-y0) == false and
+         symin <= ymin and ymin < symax then
+          return util.sign(y3-y0)
+      end
+      return 0
     end
 
     if instruction == "rational_quadratic_segment" then
       local offset = shape.offsets[segment_num]
       local x0,y0,x1,y1,w1,x2,y2 = unpack(shape.data,offset,offset+6)
-      -- return insidetest_rationalquadratic(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
+      local sxmin,symin,sxmax,symax = math.min(x0,x2),math.min(y0,y2),math.max(x0,x2),math.max(y0,y2)
+      if horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmin-0.05,ymin) == true and
+         horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax+0.05,ymin) == false and
+         symin <= ymin and ymin < symax then
+          return util.sign(y2-y0)
+      end
     end
 
     return 0
@@ -958,7 +1002,8 @@ function fillData(scene, tree, fatherInd, ind)
         else
           -- if ind == "031" and k == 9 then print("Got wind num",tree[ind].winding[k],"because of segment", segment_num) end
         end
-        local xmin,ymin,xmax,ymax = unpack(tree[fatherInd.."2"].boundingBox)
+        local xmin,ymin,xmax,ymax = unpack(tree[fatherInd.."2"].boundingBox,1,4)
+        print("And the bounding box is", xmin, ymin, xmax, ymax)
         tree[ind].winding[k] = tree[ind].winding[k] + LineIntersect(k,segment_num,shape,xmin,ymin,xmax,ymax,ind)
       end
 
@@ -1059,7 +1104,7 @@ A tree terá uma estrutura própria associada, que será explicada logo abaixo. 
 	ind -> "0", "01", "02", ..., é o índice associado a uma certa bounding box. Cada número representa a escolha de uma bounding box antecessora na subdivisão:
 	 1 para o canto superior esquerdo, 2 para o canto superior direito, 3 para o inferior esquerdo e 4 para o inferior direito. Cada dígito é uma subdivisão.
 	tree[ind].boundingBox -> Auto-explicativo, trata-se do bounding box associado à cada subdivisão. É uma tabela cheia no formato {xmin, ymin, xmax, ymax}
-	tree[ind].data -> Representa os paths e os segmentos que serão levados em consideração pelos pontos pertencentes àquela região.
+	tree[ind].data -> Repfaresenta os paths e os segmentos que serão levados em consideração pelos pontos pertencentes àquela região.
 	Formato de tabela cheia: {numero_do_path: {numero_do_segmento, numero_do_segmento, ...} ...}
 	tree[ind].winding -> Outra tabela cheia, guarda o winding_increment relativo ao path representado pelo índice (O path 1 possui o winding number da posição [1] da table).
 	O winding_increment é calculado de acordo com o artigo "Massively Parallel Vector Graphics", 2014.
@@ -1204,9 +1249,7 @@ function _M.accelerate(scene, viewport)
 	end
 
 	function pe(self, winding_rule, shape, paint)
-			if shape.type == "circle" then
-				accel_circle(scene, shape)
-			elseif shape.type ~= "path" then shape = shape:as_path(shape, shape.xf) end
+			if shape.type ~= "path" then shape = shape:as_path(shape, shape.xf) end
 
 			local pxmin = 10000
 			local pymin = 10000
@@ -1750,9 +1793,6 @@ function wind(accel, i, ind, x, y)
   local paint = accel.paints[i]
   local rec = false
   if x == 15.5 and y == 45.5 then rec = true end
-	if path.type == "circle" then
-		return test_circle(accel,path,x,y)
-	end
   local wind_num = 0
   -- if rec then io.write(i,": ") end
   for i_seg, seg in pairs(data[i]) do
@@ -1848,7 +1888,7 @@ local rept = false
 local tree = accel.tree
 local ind = '0'
 local rec = false
-if x == 35.5 and y == 155.5 then rec = true end
+if x == 35.5 and y == 155.5 then return 0,255,0,1 end
 -- Iterates through the shortcut tree, finds an ind(leaf) for itself
 while tree[ind].leaf == false do
   for i = 1, 4, 1 do
@@ -1878,7 +1918,7 @@ for data = 1, #shortcuts, 4 do
     -- if math.abs(x0-x) < 1 and math.min(y0,y1) <= y and y <= math.max(y0,y1) then return 0,255,0,1 end
     -- print(valor)
     -- if  -2 < valor and valor < 2 then return 0,1,0,1 end
-end
+  end
 end
 
 -- if rec then print("My ind is: ", ind) end
@@ -1891,6 +1931,7 @@ for i = #tree[ind].data, 1, -1 do
       local shape = accel.shapes[i]
       local paint = accel.paints[i]
       local wind_num = tree[ind].winding[i]
+      if rec then print("Initial winding: ", wind_num) end
       wind_num = wind_num + wind(accel, i, ind, x, y)
       if rec then print("My winding number is: ", wind_num) end
       -- if rec then print("After wind is: ", wind_num) end

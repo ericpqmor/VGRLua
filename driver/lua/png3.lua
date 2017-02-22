@@ -264,7 +264,6 @@ end
 
 
 function horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w,x2,y2,sign,x,y)
-	local bezout = {}
 	local px0 = x0 - x
 	local px1 = x1 - w*x
 	local px2 = x2 - x
@@ -277,11 +276,7 @@ function horizontal_implicit_rational_quadratic_test(x0,y0,x1,y1,w,x2,y2,sign,x,
 	local v0 = py0
 	local v1 = 2*(py1 - py0)
 	local v2 = py0 - 2*py1 + py2
-	bezout[1] = u1*v0 - u0*v1
-	bezout[2] = u2*v0 - u0*v2
-	bezout[3] = bezout[2]
-	bezout[4] = u2*v1 - u1*v2
-	local r = -det(bezout)
+  local r = -util.det2(u1*v0 - u0*v1, u2*v0 - u0*v2, u2*v0 - u0*v2, u2*v1 - u1*v2)
 	return sign*r <0
 end
 
@@ -1230,8 +1225,6 @@ function _M.accelerate(scene, viewport)
 	end
 
 	function pe(self, winding_rule, shape, paint)
-			--if shape.type == "circle" then
-				--accel_circle(scene, shape)
 			if shape.type ~= "path" then shape = shape:as_path(shape, shape.xf) end
 
 			local pxmin = 10000

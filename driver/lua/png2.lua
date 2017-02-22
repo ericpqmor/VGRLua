@@ -106,7 +106,6 @@ function implicit_vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y)
     local valor = 4*(y*x1-y1*x)*(y2*x1-y1*x2)-((2*y1-y2)*x+(x2-2*x1)*y)*((2*y1-y2)*x+(x2-2*x1)*y)
     local sign = 2*x2*(y1*x2 - y2*x1)
     if sign > 0 then valor = -valor end
-
     return valor > 0
 end
 
@@ -114,13 +113,14 @@ function implicit_horizontal_quadratic_test(x0,y0,x1,y1,x2,y2,x,y)
     local valor = 4*(x*y1-x1*y)*(x2*y1-x1*y2)-((2*x1-x2)*y+(y2-2*y1)*x)*((2*x1-x2)*y+(y2-2*y1)*x)
     local sign = 2*y2*(x1*y2 - x2*y1)
     if sign > 0 then valor = -valor end
-
     return valor < 0
 end
 
 function vertical_quadratic_test(x0,y0,x1,y1,x2,y2,x,y,xmin,ymin,xmax,ymax,diagonal)
   local test = false
-  if xmin <= x and x < xmax and y > ymin then
+  local rec = false
+  if x == 145.5 and y == 75.5 then rec = true end
+  if xmin <= x and x < xmax and y >= ymin then
     if y >= ymax then test = true
     else
       if (y1-y0)*(x2-x0) == (y2-y0)*(x1-x0) then
