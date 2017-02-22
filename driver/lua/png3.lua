@@ -30,19 +30,7 @@ local _M = driver.new()
 -- acceleration datastructure that contains all scene
 -- information in a form that enables fast sampling.
 -- For now, it simply returns the scene itself.
-local function det(list)
-	local n = #list
-	local rv = "error"
-	if n == 4 then
-		rv = list[1]*list[4] - list[2]*list[3]
-	elseif n == 9 then
-		local a = list[1]*(list[5]*list[9] - list[6]*list[8])
-		local b = list[2]*(list[4]*list[9] - list[6]*list[7])
-		local c = list[3]*(list[4]*list[8] - list[5]*list[7])
-		rv = a - b + c
-	end
-	return rv
-end
+
 function accel_circle(scene, shape)
 
     local transformed = scene.xf*shape.xf
@@ -221,18 +209,22 @@ function calculate_rational_quadratic_coefs(x0,y0,x1,y1,w1,x2,y2)
 
   return a,b,c,d,e,sign
 end
-
-function vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
-  -- Observe que o teste vertical das quadráticas racionais não pré-calcula os coeficientes.
-  -- Fiz isso para simplificar, já que essa função deve ser chamada apenas em pré-processamento.
-  local a = (4*y1^2 - 4*w1*y1*y2 + y2^2)
-  local b = 4*y1*y2*x1 - 4*y1^2*x2
-  local c = -4*y2*x1^2 + 4*y1*x1*x2
-  local d = -8*y1*x1 + 4*w1*y2*x1 + 4*w1*y1*x2 - 2*y2*x2
-  local e = (4*x1^2 - 4*w1*x1*x2 + x2^2)
-  local sign = 2*x2*(-y2*x1 + y1*x2)
-  local valor = x*(a*x + b) + y*(c + x*d + y*e)
-  return valor*sign > 0
+function vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w,x2,y2,x,y)
+	local px0 = x0 - x
+	local px1 = x1 - w*x
+	local px2 = x2 - x
+	local py0 = y0 - y
+	local py1 = y1 - w*y
+	local py2 = y2 - y
+	local u0 = py0
+	local u1 = 2*(py1 - py0)
+	local u2 = py0 - 2*py1 + py2
+	local v0 = px0
+	local v1 = 2*(px1 - px0)
+	local v2 = px0 - 2*px1 + px2
+	local r = -util.det2(u1*v0 - u0*v1, u2*v0 - u0*v2, u2*v0 - u0*v2, u2*v1 - u1*v2)
+    local sign = 2*x2*(-y2*x1 + y1*x2)
+	return sign*r <0
 end
 
 function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ymin,xmax,ymax,diagonal)
@@ -245,7 +237,7 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
     --Inside the bounding box. Diagonal test
       if diagonal == true then
         if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
-          test = vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,x-x0,y-y0)
+          test = vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
         else
           test = false
         end
@@ -253,7 +245,7 @@ function vertical_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y,coefs,xmin,ym
         if vertical_test_linear_segment(x0,y0,x2,y2,x,y) == true then
           test = true
         else
-          test = vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,x-x0,y-y0)
+          test = vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,x,y)
         end
       end
     end
@@ -486,8 +478,8 @@ end
 
 local function RationalQuadraticIntersection(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
   local a,b,c,d,e,f,g,h,i,sign = calculate_rational_quadratic_coefs(0,0,y1/w1-y0,x1/w1-x0,1,y2-y0,x2-x0)
-  if vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymax-y0-0.05) == true and
-    vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymin-y0+0.05) == false then
+  if vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax,ymax-0.05) == true and
+    vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax,ymin+0.05) == false then
     return true
   else
     return false
@@ -879,14 +871,14 @@ function insidetest_rationalquadratic(x0,y0,x1,y1,w1,x2,y2,xmin,ymin,xmax,ymax)
    -- local av,bv,cv,dv,ev,signv = calculate_rational_quadratic_coefs(0,0,y1/w1-y0,x1/w1-x0,1,y2-y0,x2-x0)
    --print(sxmin, symin, sxmax, symax, "bseaowj")
    -- print(xmax-x0,ymax-y0-0.05)
-    if vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymax-y0-0.05) == true and
-       vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmax-x0,ymin-y0+0.05) == false and
+    if vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax,ymax-0.05) == true and
+       vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmax,ymin+0.05) == false and
        sxmin <= xmax and xmax <= symax then
            --print("Rect: ", x0,y0,x1,y1)
           return true
     end
-    if vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmin-x0,ymax-y0-0.05) == true and
-      vertical_implicit_rational_quadratic_test(0,0,x1/w1-x0,y1/w1-y0,1,x2-x0,y2-y0,xmin-x0,ymin-y0+0.05) == false and
+    if vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmin,ymax-0.05) == true and
+      vertical_implicit_rational_quadratic_test(x0,y0,x1,y1,w1,x2,y2,xmin,ymin+0.05) == false and
       sxmin <= xmin and xmin <= sxmax then
           return true
     end
